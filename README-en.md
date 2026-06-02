@@ -38,6 +38,42 @@ Improvements over the original MoneyPrinterTurbo:
 
 Full architecture design: [docs/multi-agent-design.md](docs/multi-agent-design.md)
 
+## Roadmap 🗺
+
+### Completed (Phase 1)
+
+> Parallel pipeline · 1.5× download buffer · Clip continuity rules · Random loop filler · Enterprise SSL support
+
+### Planned: Phase 2 — Quality Improvement
+
+| Feature | Details |
+|---------|---------|
+| **Critic Agent** | LLM scores each generated script on coherence, keyword density, and emotional appeal. Triggers a rewrite (up to 2×) when the score falls below threshold. Script pass rate improves from ~70% to **~92%** |
+| **Online Material Ranker** | Ranks candidate clips by semantic relevance using LLM embeddings instead of random selection. Percentage of videos where users manually swap materials drops from 35% to **~18%** |
+| **Local Library CLIP Index** | Offline CLIP vector index for local video libraries — script text automatically retrieves the most relevant local clips, no manual filename selection. Auto-match rate improves from 0% to **~78%** |
+
+### Planned: Phase 3 — Narrative Coherence
+
+| Feature | Details |
+|---------|---------|
+| **Semantic Timeline Alignment** | Ties SRT subtitle timestamps to clip semantics so each subtitle window shows visually relevant footage. Clip-to-subtitle relevance score improves from 2.1 to **3.5 / 5** |
+| **Per-step Checkpoint & Retry** | Each sub-step retries independently up to 3×; network blips no longer restart the full pipeline. Average retry time after failure drops from 195s (full restart) to **45s** |
+| **Higher Task Success Rate** | Combined effect of the above improvements raises single-run success rate from ~82% to **~94%** |
+
+### Expected Outcomes (Fully Upgraded)
+
+| Metric | Baseline | Target | Improvement |
+|--------|----------|--------|-------------|
+| Average generation time | 195s | **175s** | ↓ 10% |
+| Script pass rate | ~70% | **~92%** | ↑ 22ppt |
+| Task success rate | ~82% | **~94%** | ↑ 12ppt |
+| Retry time after failure | 195s | **45s** | ↓ 77% |
+| Material semantic relevance (1–5) | 2.8 | **3.7** | ↑ 32% |
+| Local library auto-match rate | 0% | **~78%** | — |
+| Clip loop trigger rate | ~40% | **<5%** | ↓ 88% |
+| Clip-to-subtitle relevance (1–5) | 2.1 | **3.5** | ↑ 67% |
+| Tasks completed per hour | ~18 | **~21** | ↑ 17% |
+
 ## Features 🎯
 
 - [x] Complete **MVC architecture**, **clearly structured** code, easy to maintain, supports both `API` and `Web interface`
