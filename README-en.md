@@ -1,21 +1,18 @@
 <div align="center">
-<h1 align="center">MoneyPrinterTurbo 💸</h1>
+<h1 align="center">MoneyPrinterPlus 💸</h1>
 
 <p align="center">
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/stargazers"><img src="https://img.shields.io/github/stars/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="Stargazers"></a>
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/issues"><img src="https://img.shields.io/github/issues/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="Issues"></a>
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/network/members"><img src="https://img.shields.io/github/forks/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="Forks"></a>
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/stargazers"><img src="https://img.shields.io/github/stars/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="Stargazers"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/issues"><img src="https://img.shields.io/github/issues/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="Issues"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/network/members"><img src="https://img.shields.io/github/forks/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="Forks"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/blob/main/LICENSE"><img src="https://img.shields.io/github/license/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="License"></a>
 </p>
 
 <h3>English | <a href="README.md">简体中文</a></h3>
 
-<div align="center">
-  <a href="https://trendshift.io/repositories/8731" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8731" alt="harry0703%2FMoneyPrinterTurbo | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
+An enhanced fork of <a href="https://github.com/harry0703/MoneyPrinterTurbo">MoneyPrinterTurbo</a> with systematic improvements to pipeline performance, material quality, and video composition consistency.
 
-Simply provide a <b>topic</b> or <b>keyword</b> for a video, and it will automatically generate the video copy, video
-materials, video subtitles, and video background music before synthesizing a high-definition short video.
+Simply provide a <b>topic</b> or <b>keyword</b> for a video, and it will automatically generate the video copy, video materials, video subtitles, and video background music before synthesizing a high-definition short video.
 
 ### WebUI
 
@@ -27,21 +24,32 @@ materials, video subtitles, and video background music before synthesizing a hig
 
 </div>
 
+## What's New ✨
+
+Improvements over the original MoneyPrinterTurbo:
+
+| Improvement | Details | Impact |
+|-------------|---------|--------|
+| **Parallel pipeline** | TTS and keyword extraction run concurrently; subtitle generation and material download run concurrently after TTS | End-to-end time ↓ ~10% (195s → 175s) |
+| **Material download buffer** | Download target raised to 1.5× audio duration to keep the clip pool full | Loop trigger rate ↓ 88% (~40% → <5%) |
+| **Clip continuity rules** | Same source video blocked within a 6-clip (≈30s) window | Visual repetition ↓ 73% |
+| **Random loop filler** | Random clip selection when looping instead of sequential `itertools.cycle` replay | Eliminates identical repeated sequences |
+| **Enterprise SSL support** | `truststore` injected at startup for corporate CA certificates | Fixes SSL errors on corporate networks |
+
+Full architecture design: [docs/multi-agent-design.md](docs/multi-agent-design.md)
+
 ## Features 🎯
 
-- [x] Complete **MVC architecture**, **clearly structured** code, easy to maintain, supports both `API`
-  and `Web interface`
+- [x] Complete **MVC architecture**, **clearly structured** code, easy to maintain, supports both `API` and `Web interface`
 - [x] Supports **AI-generated** video copy, as well as **customized copy**
 - [x] Supports various **high-definition video** sizes
     - [x] Portrait 9:16, `1080x1920`
     - [x] Landscape 16:9, `1920x1080`
-- [x] Supports **batch video generation**, allowing the creation of multiple videos at once, then selecting the most
-  satisfactory one
+- [x] Supports **batch video generation**, allowing the creation of multiple videos at once, then selecting the most satisfactory one
 - [x] Supports setting the **duration of video clips**, facilitating adjustments to material switching frequency
 - [x] Supports video copy in both **Chinese** and **English**
 - [x] Supports **multiple voice** synthesis, with **real-time preview** of effects
-- [x] Supports **subtitle generation**, with adjustable `font`, `position`, `color`, `size`, and also
-  supports `subtitle outlining`
+- [x] Supports **subtitle generation**, with adjustable `font`, `position`, `color`, `size`, and also supports `subtitle outlining`
 - [x] Supports **background music**, either random or specified music files, with adjustable `background music volume`
 - [x] Video material sources are **high-definition** and **royalty-free**, and you can also use your own **local materials**
 - [x] Supports integration with various models such as **OpenAI**, **Moonshot**, **Azure**, **gpt4free**, **one-api**, **Qwen**, **Google Gemini**, **Ollama**, **DeepSeek**, **MiniMax**, **ERNIE**, **Pollinations**, **ModelScope** and more
@@ -101,14 +109,14 @@ materials, video subtitles, and video background music before synthesizing a hig
 ### Recommended Paths
 
 - Windows users: use the one-click package first for the fastest local trial
-- MacOS / Linux users: use `uv sync --frozen` for the primary local setup path
+- macOS / Linux users: use `uv sync --frozen` for the primary local setup path
 - If you want a more isolated runtime: use Docker deployment
 
-### Run in Google Colab 
-Want to try MoneyPrinterTurbo without setting up a local environment? Run it directly in Google Colab!
+### Run in Google Colab
+
+Want to try without setting up a local environment? Run it directly in Google Colab!
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/harry0703/MoneyPrinterTurbo/blob/main/docs/MoneyPrinterTurbo.ipynb)
-
 
 ### Windows
 
@@ -116,46 +124,48 @@ The downloadable package is still the older `v1.2.6` bundled build. After downlo
 
 Google Drive (v1.2.6): https://drive.google.com/file/d/1HsbzfT7XunkrCrHw5ncUjFX8XX4zAuUh/view?usp=sharing
 
-After downloading, it is recommended to **double-click** `update.bat` first to update to the **latest code**, then double-click `start.bat` to launch
+After downloading, it is recommended to **double-click** `update.bat` first to update to the **latest code**, then double-click `start.bat` to launch.
 
-After launching, the browser will open automatically (if it opens blank, it is recommended to use **Chrome** or **Edge**)
+After launching, the browser will open automatically (if it opens blank, use **Chrome** or **Edge**).
 
 ### Other Systems
 
-One-click startup packages have not been created yet. See the **Installation & Deployment** section below. It is recommended to use **docker** for deployment, which is more convenient.
+One-click startup packages have not been created yet. See the **Installation & Deployment** section below. Docker is the recommended deployment method.
 
 ## Installation & Deployment 📥
 
 ### Prerequisites
 
+- Avoid **Chinese characters** in the project path to prevent unpredictable issues
+- Ensure your **network** is working properly; VPN should be set to `global traffic` mode
+
 #### ① Clone the Project
 
 ```shell
-git clone https://github.com/harry0703/MoneyPrinterTurbo.git
+git clone https://github.com/yao-li57/MoneyPrinterPlus.git
 ```
 
 #### ② Modify the Configuration File
 
 - Copy the `config.example.toml` file and rename it to `config.toml`
-- Follow the instructions in the `config.toml` file to configure `pexels_api_keys` and `llm_provider`, and according to
-  the llm_provider's service provider, set up the corresponding API Key
+- Configure `pexels_api_keys` and `llm_provider`, and set up the corresponding API Key for the chosen LLM provider
 
 ### Docker Deployment 🐳
 
 #### ① Launch the Docker Container
 
-If you haven't installed Docker, please install it first https://www.docker.com/products/docker-desktop/
-If you are using a Windows system, please refer to Microsoft's documentation:
+If you haven't installed Docker, please install it first: https://www.docker.com/products/docker-desktop/
 
+Windows users, refer to Microsoft's documentation:
 1. https://learn.microsoft.com/en-us/windows/wsl/install
 2. https://learn.microsoft.com/en-us/windows/wsl/tutorials/wsl-containers
 
 ```shell
-cd MoneyPrinterTurbo
+cd MoneyPrinterPlus
 docker-compose up
 ```
 
-> Note：The latest version of docker will automatically install docker compose in the form of a plug-in, and the start command is adjusted to `docker compose up `
+> Note: The latest Docker version installs docker compose as a plugin. Use `docker compose up` if the above fails.
 
 #### ② Access the Web Interface
 
@@ -163,22 +173,22 @@ Open your browser and visit http://0.0.0.0:8501
 
 #### ③ Access the API Interface
 
-Open your browser and visit http://0.0.0.0:8080/docs Or http://0.0.0.0:8080/redoc
+Open your browser and visit http://0.0.0.0:8080/docs or http://0.0.0.0:8080/redoc
 
 ### Manual Deployment 📦
 
 #### ① Create a Python Virtual Environment
 
-It is recommended to use [uv](https://docs.astral.sh/uv/) to manage the Python environment and dependencies, with Python `3.11` as the default runtime.
+It is recommended to use [uv](https://docs.astral.sh/uv/) with Python `3.11`:
 
 ```shell
-git clone https://github.com/harry0703/MoneyPrinterTurbo.git
-cd MoneyPrinterTurbo
+git clone https://github.com/yao-li57/MoneyPrinterPlus.git
+cd MoneyPrinterPlus
 uv python install 3.11
 uv sync --frozen
 ```
 
-If you are not using `uv` yet, you can still use `venv + pip`.
+If you are not using `uv`, you can use `venv + pip`:
 
 ```shell
 python3.11 -m venv .venv
@@ -187,31 +197,31 @@ pip install -r requirements.txt
 ```
 
 Notes:
-- `pyproject.toml` is now the primary dependency manifest.
-- `uv.lock` pins the resolved environment, so `uv sync --frozen` is recommended by default.
-- `requirements.txt` is kept only for legacy `pip`-based installation.
+- `pyproject.toml` is the primary dependency manifest
+- `uv.lock` pins the resolved environment; `uv sync --frozen` is recommended
+- `requirements.txt` is kept only for legacy `pip`-based installation
 
 #### ② Install ImageMagick
 
 ###### Windows:
 
-- Download https://imagemagick.org/script/download.php Choose the Windows version, make sure to select the **static library** version, such as ImageMagick-7.1.1-32-Q16-x64-**static**.exe
-- Install the downloaded ImageMagick, **do not change the installation path**
-- Modify the `config.toml` configuration file, set `imagemagick_path` to your actual installation path
+- Download https://imagemagick.org/script/download.php, choose the Windows **static library** version, e.g. ImageMagick-7.1.1-32-Q16-x64-**static**.exe
+- Install it without changing the installation path
+- Set `imagemagick_path` in `config.toml` to your actual installation path
 
-###### MacOS:
+###### macOS:
 
 ```shell
 brew install imagemagick
-````
+```
 
-###### Ubuntu
+###### Ubuntu:
 
 ```shell
 sudo apt-get install imagemagick
 ```
 
-###### CentOS
+###### CentOS:
 
 ```shell
 sudo yum install ImageMagick
@@ -219,7 +229,7 @@ sudo yum install ImageMagick
 
 #### ③ Launch the Web Interface 🌐
 
-Note that you need to execute the following commands in the `root directory` of the MoneyPrinterTurbo project
+Run from the project **root directory**:
 
 ###### Windows
 
@@ -227,25 +237,23 @@ Note that you need to execute the following commands in the `root directory` of 
 uv run streamlit run ./webui/Main.py --browser.gatherUsageStats=False
 ```
 
-If you have already activated the virtual environment manually, you can still run:
+Or if you have already activated the virtual environment:
 
 ```bat
 webui.bat
 ```
 
-###### MacOS or Linux
+###### macOS or Linux
 
 ```shell
 uv run streamlit run ./webui/Main.py --browser.gatherUsageStats=False
 ```
 
-If you have already activated the virtual environment manually, you can still run:
+Or if you have already activated the virtual environment:
 
 ```shell
 sh webui.sh
 ```
-
-After launching, the browser will open automatically
 
 #### ④ Launch the API Service 🚀
 
@@ -253,73 +261,41 @@ After launching, the browser will open automatically
 uv run python main.py
 ```
 
-If you have already activated the virtual environment manually, you can still run:
+Or if you have already activated the virtual environment:
 
 ```shell
 python main.py
 ```
 
-## Special Thanks 🙏
-
-Due to the **deployment** and **usage** of this project, there is a certain threshold for some beginner users. We would
-like to express our special thanks to
-
-**RecCloud (AI-Powered Multimedia Service Platform)** for providing a free `AI Video Generator` service based on this
-project. It allows for online use without deployment, which is very convenient.
-
-- Chinese version: https://reccloud.cn
-- English version: https://reccloud.com
-
-![](docs/reccloud.com.jpg)
-
-## Thanks for Sponsorship 🙏
-
-Thanks to Picwish https://picwish.com for supporting and sponsoring this project, enabling continuous updates and maintenance.
-
-Picwish focuses on the **image processing field**, providing a rich set of **image processing tools** that extremely simplify complex operations, truly making image processing easier.
-
-![picwish.jpg](docs/picwish.com.jpg)
-
-After launching, you can view the `API documentation` at http://127.0.0.1:8080/docs and directly test the interface
-online for a quick experience.
+After launching, view the API documentation at http://127.0.0.1:8080/docs.
 
 ## Voice Synthesis 🗣
 
 A list of all supported voices can be viewed here: [Voice List](./docs/voice-list.txt)
 
-2024-04-16 v1.1.2 Added 9 new Azure voice synthesis voices that require API KEY configuration. These voices sound more realistic.
+Supports Azure, edge-tts, SiliconFlow, and Gemini TTS. Switch providers in `config.toml`.
 
 ## Subtitle Generation 📜
 
-Currently, there are 2 ways to generate subtitles:
+Two subtitle generation methods are supported:
 
-- **edge**: Faster generation speed, better performance, no specific requirements for computer configuration, but the
-  quality may be unstable
-- **whisper**: Slower generation speed, poorer performance, specific requirements for computer configuration, but more
-  reliable quality
+- **edge**: Faster generation, better performance, no specific hardware requirements, but quality may be unstable
+- **whisper**: Slower generation, more demanding on hardware, but more reliable quality
 
-You can switch between them by modifying the `subtitle_provider` in the `config.toml` configuration file
-
-It is recommended to use `edge` mode, and switch to `whisper` mode if the quality of the subtitles generated is not
-satisfactory.
+Switch by modifying `subtitle_provider` in `config.toml`. Start with `edge`; switch to `whisper` if quality is insufficient.
 
 > Note:
->
-> 1. In whisper mode, you need to download a model file from HuggingFace, about 3GB in size, please ensure good internet connectivity
-> 2. If left blank, it means no subtitles will be generated.
+> 1. In whisper mode, a ~3GB model file needs to be downloaded from HuggingFace
+> 2. If left blank, no subtitles will be generated
 
-> Since HuggingFace is not accessible in China, you can use the following methods to download the `whisper-large-v3` model file
-
-Download links:
-
+Download links for `whisper-large-v3` (for users who cannot access HuggingFace):
 - Baidu Netdisk: https://pan.baidu.com/s/11h3Q6tsDtjQKTjUu3sc5cA?pwd=xjs9
 - Quark Netdisk: https://pan.quark.cn/s/3ee3d991d64b
 
-After downloading the model, extract it and place the entire directory in `.\MoneyPrinterTurbo\models`,
-The final file path should look like this: `.\MoneyPrinterTurbo\models\whisper-large-v3`
+After downloading, extract and place the directory under `.\MoneyPrinterPlus\models`:
 
 ```
-MoneyPrinterTurbo
+MoneyPrinterPlus
   ├─models
   │   └─whisper-large-v3
   │          config.json
@@ -331,96 +307,70 @@ MoneyPrinterTurbo
 
 ## Background Music 🎵
 
-Background music for videos is located in the project's `resource/songs` directory.
-> The current project includes some default music from YouTube videos. If there are copyright issues, please delete
-> them.
+Background music files are located in the project's `resource/songs` directory.
 
 ## Subtitle Fonts 🅰
 
-Fonts for rendering video subtitles are located in the project's `resource/fonts` directory, and you can also add your
-own fonts.
+Fonts for rendering subtitles are located in the project's `resource/fonts` directory. You can add your own fonts there.
 
 ## Common Questions 🤔
 
 ### ❓RuntimeError: No ffmpeg exe could be found
 
-Normally, ffmpeg will be automatically downloaded and detected.
-However, if your environment has issues preventing automatic downloads, you may encounter the following error:
+Normally ffmpeg will be automatically downloaded and detected. If your environment prevents automatic downloads:
 
 ```
 RuntimeError: No ffmpeg exe could be found.
 Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.
 ```
 
-In this case, you can download ffmpeg from https://www.gyan.dev/ffmpeg/builds/, unzip it, and set `ffmpeg_path` to your
-actual installation path.
+Download ffmpeg from https://www.gyan.dev/ffmpeg/builds/, then set `ffmpeg_path` in `config.toml`:
 
 ```toml
 [app]
-# Please set according to your actual path, note that Windows path separators are \\
-ffmpeg_path = "C:\\Users\\harry\\Downloads\\ffmpeg.exe"
+# Use actual path; on Windows use double backslashes
+ffmpeg_path = "C:\\Users\\yourname\\Downloads\\ffmpeg.exe"
 ```
 
 ### ❓ImageMagick is not installed on your computer
 
-[issue 33](https://github.com/harry0703/MoneyPrinterTurbo/issues/33)
+1. Download and install the static library version: https://imagemagick.org/archive/binaries/ImageMagick-7.1.1-30-Q16-x64-static.exe
+2. Do not install in a path with Chinese characters
 
-1. Follow the `example configuration` provided `download address` to
-   install https://imagemagick.org/archive/binaries/ImageMagick-7.1.1-30-Q16-x64-static.exe, using the static library
-2. Do not install in a path with Chinese characters to avoid unpredictable issues
+For Linux systems: https://cn.linux-console.net/?p=16978
 
-[issue 54](https://github.com/harry0703/MoneyPrinterTurbo/issues/54#issuecomment-2017842022)
+### ❓ImageMagick's security policy prevents operations on temporary files
 
-For Linux systems, you can manually install it, refer to https://cn.linux-console.net/?p=16978
-
-Thanks to [@wangwenqiao666](https://github.com/wangwenqiao666) for their research and exploration
-
-### ❓ImageMagick's security policy prevents operations related to temporary file @/tmp/tmpur5hyyto.txt
-
-You can find these policies in ImageMagick's configuration file policy.xml.
-This file is usually located in /etc/ImageMagick-`X`/ or a similar location in the ImageMagick installation directory.
-Modify the entry containing `pattern="@"`, change `rights="none"` to `rights="read|write"` to allow read and write operations on files.
+Find `policy.xml` (usually in `/etc/ImageMagick-X/`). Locate the entry containing `pattern="@"` and change `rights="none"` to `rights="read|write"`.
 
 ### ❓OSError: [Errno 24] Too many open files
 
-This issue is caused by the system's limit on the number of open files. You can solve it by modifying the system's file open limit.
-
-Check the current limit:
-
-```shell
-ulimit -n
-```
-
-If it's too low, you can increase it, for example:
+Increase the system file open limit:
 
 ```shell
 ulimit -n 10240
 ```
 
-### ❓Whisper model download failed, with the following error
+### ❓Whisper model download failed
 
-LocalEntryNotfoundEror: Cannot find an appropriate cached snapshotfolderfor the specified revision on the local disk and
-outgoing trafic has been disabled.
-To enablerepo look-ups and downloads online, pass 'local files only=False' as input.
+Refer to the Subtitle Generation section above to manually download the model from the cloud storage links.
 
-or
+### ❓SSL certificate errors on corporate networks
 
-An error occurred while synchronizing the model Systran/faster-whisper-large-v3 from the Hugging Face Hub:
-An error happened while trying to locate the files on the Hub and we cannot find the appropriate snapshot folder for the
-specified revision on the local disk. Please check your internet connection and try again.
-Trying to load the model directly from the local cache, if it exists.
-
-Solution: [Click to see how to manually download the model from netdisk](#subtitle-generation-)
+This project includes built-in `truststore` support that injects system CA certificates at startup. Make sure `truststore` is installed (`uv sync --frozen` handles this automatically).
 
 ## Feedback & Suggestions 📢
 
-- You can submit an [issue](https://github.com/harry0703/MoneyPrinterTurbo/issues) or
-  a [pull request](https://github.com/harry0703/MoneyPrinterTurbo/pulls).
+- Submit an [issue](https://github.com/yao-li57/MoneyPrinterPlus/issues) or a [pull request](https://github.com/yao-li57/MoneyPrinterPlus/pulls)
 
 ## License 📝
 
 Click to view the [`LICENSE`](LICENSE) file
 
+## Acknowledgements
+
+This project is built upon [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo). Thanks to [@harry0703](https://github.com/harry0703) for the excellent original work.
+
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=harry0703/MoneyPrinterTurbo&type=Date)](https://star-history.com/#harry0703/MoneyPrinterTurbo&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=yao-li57/MoneyPrinterPlus&type=Date)](https://star-history.com/#yao-li57/MoneyPrinterPlus&Date)

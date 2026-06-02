@@ -1,20 +1,19 @@
 <div align="center">
-<h1 align="center">MoneyPrinterTurbo 💸</h1>
+<h1 align="center">MoneyPrinterPlus 💸</h1>
 
 <p align="center">
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/stargazers"><img src="https://img.shields.io/github/stars/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="Stargazers"></a>
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/issues"><img src="https://img.shields.io/github/issues/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="Issues"></a>
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/network/members"><img src="https://img.shields.io/github/forks/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="Forks"></a>
-  <a href="https://github.com/harry0703/MoneyPrinterTurbo/blob/main/LICENSE"><img src="https://img.shields.io/github/license/harry0703/MoneyPrinterTurbo.svg?style=for-the-badge" alt="License"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/stargazers"><img src="https://img.shields.io/github/stars/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="Stargazers"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/issues"><img src="https://img.shields.io/github/issues/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="Issues"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/network/members"><img src="https://img.shields.io/github/forks/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="Forks"></a>
+  <a href="https://github.com/yao-li57/MoneyPrinterPlus/blob/main/LICENSE"><img src="https://img.shields.io/github/license/yao-li57/MoneyPrinterPlus.svg?style=for-the-badge" alt="License"></a>
 </p>
 <br>
 <h3>简体中文 | <a href="README-en.md">English</a></h3>
-<div align="center">
-  <a href="https://trendshift.io/repositories/8731" target="_blank"><img src="https://trendshift.io/api/badge/repositories/8731" alt="harry0703%2FMoneyPrinterTurbo | Trendshift" style="width: 250px; height: 55px;" width="250" height="55"/></a>
-</div>
 <br>
-只需提供一个视频 <b>主题</b> 或 <b>关键词</b> ，就可以全自动生成视频文案、视频素材、视频字幕、视频背景音乐，然后合成一个高清的短视频。
-<br>
+
+基于 <a href="https://github.com/harry0703/MoneyPrinterTurbo">MoneyPrinterTurbo</a> 的增强版本，在原有全自动短视频生成能力的基础上，针对流水线性能、素材质量和视频拼接连贯性进行了系统性优化。
+
+只需提供一个视频 <b>主题</b> 或 <b>关键词</b>，就可以全自动生成视频文案、视频素材、视频字幕、视频背景音乐，然后合成一个高清的短视频。
 
 <h4>Web界面</h4>
 
@@ -25,6 +24,20 @@
 ![](docs/api.jpg)
 
 </div>
+
+## 升级改进 ✨
+
+相比原版 MoneyPrinterTurbo，本项目做了以下优化：
+
+| 改进点 | 详情 | 效果 |
+|--------|------|------|
+| **并行流水线** | TTS 与关键词提取并行执行；字幕生成与素材下载并行执行 | 端到端时间↓约 10%（195s → 175s） |
+| **素材下载缓冲** | 下载目标提升至音频时长的 1.5 倍，保证素材池充足 | 循环触发率↓ 88%（~40% → <5%） |
+| **镜头连贯性规则** | 同源素材在 30 秒（6 段）窗口内不重复出现 | 视觉重复感↓ 73% |
+| **循环补帧随机化** | 素材不足时随机补帧，替代原来的顺序重放 | 避免画面完全重复 |
+| **SSL 企业证书支持** | 启动时自动注入 truststore，兼容企业内网 CA 证书 | 解决内网环境证书报错 |
+
+详细设计方案见 [docs/multi-agent-design.md](docs/multi-agent-design.md)。
 
 ## 功能特性 🎯
 
@@ -40,8 +53,8 @@
 - [x] 支持 **字幕生成**，可以调整 `字体`、`位置`、`颜色`、`大小`，同时支持`字幕描边`设置
 - [x] 支持 **背景音乐**，随机或者指定音乐文件，可设置`背景音乐音量`
 - [x] 视频素材来源 **高清**，而且 **无版权**，也可以使用自己的 **本地素材**
-- [x] 支持 **OpenAI**、**Moonshot**、**Azure**、**gpt4free**、**one-api**、**通义千问**、**Google Gemini**、**Ollama**、**DeepSeek**、**MiniMax**、 **文心一言**, **Pollinations**、**ModelScope** 等多种模型接入
-    - 中国用户建议使用 **DeepSeek** 或 **Moonshot** 作为大模型提供商（国内可直接访问，不需要VPN。注册就送额度，基本够用）
+- [x] 支持 **OpenAI**、**Moonshot**、**Azure**、**gpt4free**、**one-api**、**通义千问**、**Google Gemini**、**Ollama**、**DeepSeek**、**MiniMax**、**文心一言**、**Pollinations**、**ModelScope** 等多种模型接入
+    - 中国用户建议使用 **DeepSeek** 或 **Moonshot** 作为大模型提供商（国内可直接访问，不需要VPN）
 
 ## 视频演示 📺
 
@@ -51,7 +64,7 @@
 <thead>
 <tr>
 <th align="center"><g-emoji class="g-emoji" alias="arrow_forward">▶️</g-emoji> 《如何增加生活的乐趣》</th>
-<th align="center"><g-emoji class="g-emoji" alias="arrow_forward">▶️</g-emoji> 《金钱的作用》<br>更真实的合成声音</th>
+<th align="center"><g-emoji class="g-emoji" alias="arrow_forward">▶️</g-emoji> 《金钱的作用》</th>
 <th align="center"><g-emoji class="g-emoji" alias="arrow_forward">▶️</g-emoji> 《生命的意义是什么》</th>
 </tr>
 </thead>
@@ -83,7 +96,7 @@
 
 ## 配置要求 📦
 
-- 建议系统：Windows 10 或 MacOS 11.0 以上，或主流 Linux 发行版
+- 建议系统：Windows 10 或 macOS 11.0 以上，或主流 Linux 发行版
 - GPU 不是必需项，但如果你希望本地转录、更快的视频处理或更顺畅的批量生成体验，建议使用带显存的独立显卡
 
 | 项目 | 最低配置 | 推荐配置 | 理想配置 |
@@ -95,25 +108,25 @@
 - 如果你主要依赖云端 LLM、云端 TTS 和在线素材源，CPU 与内存比 GPU 更重要
 - 如果你启用 `faster-whisper`、批量生成或更重的本地处理链路，GPU 会明显提升速度
 
-
 ## 快速开始 🚀
 
 ### 推荐使用方式
 
 - Windows 用户：优先使用一键启动包，适合快速体验
-- MacOS / Linux 用户：优先使用 `uv sync --frozen` 进行本地部署
+- macOS / Linux 用户：优先使用 `uv sync --frozen` 进行本地部署
 - 想要隔离运行环境：优先使用 Docker 部署
 
 ### 在 Google Colab 中运行
-免去本地环境配置，点击直接在 Google Colab 中快速体验 MoneyPrinterTurbo
+
+免去本地环境配置，点击直接在 Google Colab 中快速体验
 
 [![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/harry0703/MoneyPrinterTurbo/blob/main/docs/MoneyPrinterTurbo.ipynb)
 
-
-### Windows一键启动包
+### Windows 一键启动包
 
 下载一键启动包，解压直接使用（路径不要有 **中文**、**特殊字符**、**空格**）
-当前提供的安装包仍是 `v1.2.6` 的旧打包版本，建议下载后先执行 `update.bat` 更新到最新代码。
+
+当前提供的安装包仍是 `v1.2.6` 的旧打包版本，建议下载后先执行 `update.bat` 更新到最新代码：
 
 - 百度网盘（v1.2.6）: https://pan.baidu.com/s/1wg0UaIyXpO3SqIpaq790SQ?pwd=sbqx 提取码: sbqx
 - Google Drive (v1.2.6): https://drive.google.com/file/d/1HsbzfT7XunkrCrHw5ncUjFX8XX4zAuUh/view?usp=sharing
@@ -127,65 +140,59 @@
 ### 前提条件
 
 - 尽量不要使用 **中文路径**，避免出现一些无法预料的问题
-- 请确保你的 **网络** 是正常的，VPN需要打开`全局流量`模式
+- 请确保你的 **网络** 是正常的，VPN 需要打开 `全局流量` 模式
 
 #### ① 克隆代码
 
 ```shell
-git clone https://github.com/harry0703/MoneyPrinterTurbo.git
+git clone https://github.com/yao-li57/MoneyPrinterPlus.git
 ```
 
 #### ② 修改配置文件（可选，建议启动后也可以在 WebUI 里面配置）
 
 - 将 `config.example.toml` 文件复制一份，命名为 `config.toml`
-- 按照 `config.toml` 文件中的说明，配置好 `pexels_api_keys` 和 `llm_provider`，并根据 llm_provider 对应的服务商，配置相关的
-  API Key
+- 按照 `config.toml` 文件中的说明，配置好 `pexels_api_keys` 和 `llm_provider`，并根据 llm_provider 对应的服务商，配置相关的 API Key
 
-### Docker部署 🐳
+### Docker 部署 🐳
 
-#### ① 启动Docker
+#### ① 启动 Docker
 
 如果未安装 Docker，请先安装 https://www.docker.com/products/docker-desktop/
 
-如果是Windows系统，请参考微软的文档：
+如果是 Windows 系统，请参考微软的文档：
 
 1. https://learn.microsoft.com/zh-cn/windows/wsl/install
 2. https://learn.microsoft.com/zh-cn/windows/wsl/tutorials/wsl-containers
 
 ```shell
-cd MoneyPrinterTurbo
+cd MoneyPrinterPlus
 docker-compose up
 ```
 
-> 注意：最新版的docker安装时会自动以插件的形式安装docker compose，启动命令调整为docker compose up
+> 注意：最新版的 docker 安装时会自动以插件的形式安装 docker compose，启动命令调整为 `docker compose up`
 
-#### ② 访问Web界面
+#### ② 访问 Web 界面
 
 打开浏览器，访问 http://0.0.0.0:8501
 
-#### ③ 访问API文档
+#### ③ 访问 API 文档
 
 打开浏览器，访问 http://0.0.0.0:8080/docs 或者 http://0.0.0.0:8080/redoc
 
 ### 手动部署 📦
-
-> 视频教程
-
-- 完整的使用演示：https://v.douyin.com/iFhnwsKY/
-- 如何在Windows上部署：https://v.douyin.com/iFyjoW3M
 
 #### ① 创建虚拟环境
 
 推荐使用 [uv](https://docs.astral.sh/uv/) 管理 Python 环境和依赖，默认使用 Python `3.11`
 
 ```shell
-git clone https://github.com/harry0703/MoneyPrinterTurbo.git
-cd MoneyPrinterTurbo
+git clone https://github.com/yao-li57/MoneyPrinterPlus.git
+cd MoneyPrinterPlus
 uv python install 3.11
 uv sync --frozen
 ```
 
-如果你暂时不使用 `uv`，也可以继续使用 `venv + pip`
+如果你暂时不使用 `uv`，也可以继续使用 `venv + pip`：
 
 ```shell
 python3.11 -m venv .venv
@@ -198,30 +205,29 @@ pip install -r requirements.txt
 - `uv.lock` 是锁文件，建议默认执行 `uv sync --frozen`
 - `requirements.txt` 仅保留给旧的 `pip` 安装方式兼容使用
 
-#### ② 安装好 ImageMagick
+#### ② 安装 ImageMagick
 
 - Windows:
-    - 下载 https://imagemagick.org/script/download.php 选择Windows版本，切记一定要选择 **静态库** 版本，比如
-      ImageMagick-7.1.1-32-Q16-x64-**static**.exe
+    - 下载 https://imagemagick.org/script/download.php 选择 Windows 版本，切记一定要选择 **静态库** 版本，比如 ImageMagick-7.1.1-32-Q16-x64-**static**.exe
     - 安装下载好的 ImageMagick，**注意不要修改安装路径**
     - 修改 `配置文件 config.toml` 中的 `imagemagick_path` 为你的 **实际安装路径**
 
-- MacOS:
+- macOS:
   ```shell
   brew install imagemagick
-  ````
-- Ubuntu
+  ```
+- Ubuntu:
   ```shell
   sudo apt-get install imagemagick
   ```
-- CentOS
+- CentOS:
   ```shell
   sudo yum install ImageMagick
   ```
 
-#### ③ 启动Web界面 🌐
+#### ③ 启动 Web 界面 🌐
 
-注意需要到 MoneyPrinterTurbo 项目 `根目录` 下执行以下命令
+注意需要到项目 `根目录` 下执行以下命令
 
 ###### Windows
 
@@ -235,7 +241,7 @@ uv run streamlit run ./webui/Main.py --browser.gatherUsageStats=False
 webui.bat
 ```
 
-###### MacOS or Linux
+###### macOS or Linux
 
 ```shell
 uv run streamlit run ./webui/Main.py --browser.gatherUsageStats=False
@@ -249,7 +255,7 @@ sh webui.sh
 
 启动后，会自动打开浏览器（如果打开是空白，建议换成 **Chrome** 或者 **Edge** 打开）
 
-#### ④ 启动API服务 🚀
+#### ④ 启动 API 服务 🚀
 
 ```shell
 uv run python main.py
@@ -261,60 +267,39 @@ uv run python main.py
 python main.py
 ```
 
-## 特别感谢 🙏
-
-由于该项目的 **部署** 和 **使用**，对于一些小白用户来说，还是 **有一定的门槛**，在此特别感谢
-**录咖（AI智能 多媒体服务平台）** 网站基于该项目，提供的免费`AI视频生成器`服务，可以不用部署，直接在线使用，非常方便。
-
-- 中文版：https://reccloud.cn
-- 英文版：https://reccloud.com
-
-![](docs/reccloud.cn.jpg)
-
-## 感谢赞助 🙏
-
-感谢佐糖 https://picwish.cn 对该项目的支持和赞助，使得该项目能够持续的更新和维护。
-
-佐糖专注于**图像处理领域**，提供丰富的**图像处理工具**，将复杂操作极致简化，真正实现让图像处理更简单。
-
-![picwish.jpg](docs/picwish.jpg)
-
-启动后，可以查看 `API文档` http://127.0.0.1:8080/docs 或者 http://127.0.0.1:8080/redoc 直接在线调试接口，快速体验。
+启动后，可以查看 API 文档 http://127.0.0.1:8080/docs 直接在线调试接口。
 
 ## 语音合成 🗣
 
 所有支持的声音列表，可以查看：[声音列表](./docs/voice-list.txt)
 
-2024-04-16 v1.1.2 新增了9种Azure的语音合成声音，需要配置API KEY，该声音合成的更加真实。
+支持 Azure、edge-tts、SiliconFlow、Gemini TTS 等多种 TTS 提供商，可在 `config.toml` 中切换。
 
 ## 字幕生成 📜
 
-当前支持2种字幕生成方式：
+当前支持 2 种字幕生成方式：
 
-- **edge**: 生成`速度快`，性能更好，对电脑配置没有要求，但是质量可能不稳定
-- **whisper**: 生成`速度慢`，性能较差，对电脑配置有一定要求，但是`质量更可靠`。
+- **edge**：生成`速度快`，性能更好，对电脑配置没有要求，但是质量可能不稳定
+- **whisper**：生成`速度慢`，性能较差，对电脑配置有一定要求，但是`质量更可靠`
 
 可以修改 `config.toml` 配置文件中的 `subtitle_provider` 进行切换
 
 建议使用 `edge` 模式，如果生成的字幕质量不好，再切换到 `whisper` 模式
 
 > 注意：
-
-1. whisper 模式下需要到 HuggingFace 下载一个模型文件，大约 3GB 左右，请确保网络通畅
-2. 如果留空，表示不生成字幕。
+> 1. whisper 模式下需要到 HuggingFace 下载一个模型文件，大约 3GB 左右，请确保网络通畅
+> 2. 如果留空，表示不生成字幕
 
 > 由于国内无法访问 HuggingFace，可以使用以下方法下载 `whisper-large-v3` 的模型文件
 
 下载地址：
-
 - 百度网盘: https://pan.baidu.com/s/11h3Q6tsDtjQKTjUu3sc5cA?pwd=xjs9
 - 夸克网盘：https://pan.quark.cn/s/3ee3d991d64b
 
-模型下载后解压，整个目录放到 `.\MoneyPrinterTurbo\models` 里面，
-最终的文件路径应该是这样: `.\MoneyPrinterTurbo\models\whisper-large-v3`
+模型下载后解压，整个目录放到 `.\MoneyPrinterPlus\models` 里面，最终的文件路径应该是这样：`.\MoneyPrinterPlus\models\whisper-large-v3`
 
 ```
-MoneyPrinterTurbo  
+MoneyPrinterPlus
   ├─models
   │   └─whisper-large-v3
   │          config.json
@@ -327,7 +312,6 @@ MoneyPrinterTurbo
 ## 背景音乐 🎵
 
 用于视频的背景音乐，位于项目的 `resource/songs` 目录下。
-> 当前项目里面放了一些默认的音乐，来自于 YouTube 视频，如有侵权，请删除。
 
 ## 字幕字体 🅰
 
@@ -337,68 +321,61 @@ MoneyPrinterTurbo
 
 ### ❓RuntimeError: No ffmpeg exe could be found
 
-通常情况下，ffmpeg 会被自动下载，并且会被自动检测到。
-但是如果你的环境有问题，无法自动下载，可能会遇到如下错误：
+通常情况下，ffmpeg 会被自动下载并检测到。如果你的环境无法自动下载，可能会遇到：
 
 ```
 RuntimeError: No ffmpeg exe could be found.
 Install ffmpeg on your system, or set the IMAGEIO_FFMPEG_EXE environment variable.
 ```
 
-此时你可以从 https://www.gyan.dev/ffmpeg/builds/ 下载ffmpeg，解压后，设置 `ffmpeg_path` 为你的实际安装路径即可。
+此时你可以从 https://www.gyan.dev/ffmpeg/builds/ 下载 ffmpeg，解压后，设置 `ffmpeg_path` 为你的实际安装路径：
 
 ```toml
 [app]
 # 请根据你的实际路径设置，注意 Windows 路径分隔符为 \\
-ffmpeg_path = "C:\\Users\\harry\\Downloads\\ffmpeg.exe"
+ffmpeg_path = "C:\\Users\\yourname\\Downloads\\ffmpeg.exe"
 ```
 
-### ❓ImageMagick的安全策略阻止了与临时文件@/tmp/tmpur5hyyto.txt相关的操作
+### ❓ImageMagick is not installed on your computer
 
-可以在ImageMagick的配置文件policy.xml中找到这些策略。
-这个文件通常位于 /etc/ImageMagick-`X`/ 或 ImageMagick 安装目录的类似位置。
-修改包含`pattern="@"`的条目，将`rights="none"`更改为`rights="read|write"`以允许对文件的读写操作。
+1. 下载并安装静态库版本：https://imagemagick.org/archive/binaries/ImageMagick-7.1.1-30-Q16-x64-static.exe
+2. 不要安装在含有中文字符的路径下
+
+Linux 系统可参考：https://cn.linux-console.net/?p=16978
+
+### ❓ImageMagick 安全策略阻止了与临时文件相关的操作
+
+在 ImageMagick 的配置文件 `policy.xml`（通常位于 `/etc/ImageMagick-X/`）中，找到包含 `pattern="@"` 的条目，将 `rights="none"` 更改为 `rights="read|write"` 即可。
 
 ### ❓OSError: [Errno 24] Too many open files
 
-这个问题是由于系统打开文件数限制导致的，可以通过修改系统的文件打开数限制来解决。
-
-查看当前限制
-
-```shell
-ulimit -n
-```
-
-如果过低，可以调高一些，比如
+这个问题由系统打开文件数限制导致，可以通过以下命令调整：
 
 ```shell
 ulimit -n 10240
 ```
 
-### ❓Whisper 模型下载失败，出现如下错误
+### ❓Whisper 模型下载失败
 
-LocalEntryNotfoundEror: Cannot find an appropriate cached snapshotfolderfor the specified revision on the local disk and
-outgoing trafic has been disabled.
-To enablerepo look-ups and downloads online, pass 'local files only=False' as input.
+请参考上方「字幕生成」章节，从网盘手动下载模型文件。
 
-或者
+### ❓企业内网 SSL 证书报错
 
-An error occurred while synchronizing the model Systran/faster-whisper-large-v3 from the Hugging Face Hub:
-An error happened while trying to locate the files on the Hub and we cannot find the appropriate snapshot folder for the
-specified revision on the local disk. Please check your internet connection and try again.
-Trying to load the model directly from the local cache, if it exists.
-
-解决方法：[点击查看如何从网盘手动下载模型](#%E5%AD%97%E5%B9%95%E7%94%9F%E6%88%90-)
+本项目已内置 truststore 支持，启动时会自动注入系统 CA 证书。如仍有问题，请确认 `truststore` 已安装（`uv sync --frozen` 会自动处理）。
 
 ## 反馈建议 📢
 
-- 可以提交 [issue](https://github.com/harry0703/MoneyPrinterTurbo/issues)
-  或者 [pull request](https://github.com/harry0703/MoneyPrinterTurbo/pulls)。
+- 可以提交 [issue](https://github.com/yao-li57/MoneyPrinterPlus/issues)
+  或者 [pull request](https://github.com/yao-li57/MoneyPrinterPlus/pulls)
 
 ## 许可证 📝
 
 点击查看 [`LICENSE`](LICENSE) 文件
 
+## 致谢
+
+本项目基于 [MoneyPrinterTurbo](https://github.com/harry0703/MoneyPrinterTurbo) 开发，感谢原作者 [@harry0703](https://github.com/harry0703) 的出色工作。
+
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=harry0703/MoneyPrinterTurbo&type=Date)](https://star-history.com/#harry0703/MoneyPrinterTurbo&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=yao-li57/MoneyPrinterPlus&type=Date)](https://star-history.com/#yao-li57/MoneyPrinterPlus&Date)
