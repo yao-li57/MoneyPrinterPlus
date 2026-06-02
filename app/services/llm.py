@@ -532,6 +532,95 @@ Generate a script for a video, depending on the subject of the video.
     return final_script.strip()
 
 
+def critique_script(
+    video_script: str,
+    video_subject: str,
+    language: str = "",
+    paragraph_number: int = 1,
+    score_threshold: float = 0.75,
+    max_iterations: int = 2,
+) -> str:
+    """Evaluate and optionally rewrite a video script.
+
+    Each iteration makes two LLM calls: one to score the script (0.0–1.0),
+    and one to rewrite it only when the score falls below the threshold.
+    Returns the best version found within max_iterations.
+    """
+    current = video_script
+    lang_hint = f" in {language}" if language else ""
+
+    for i in range(max_iterations):
+        score_prompt = f"""
+# Role: Video Script Evaluator
+
+## Task:
+Score the following video script on a scale from 0.00 to 1.00.
+
+## Scoring Criteria (weighted average):
+1. Logical coherence (0.35): clear cause-effect or narrative flow between paragraphs
+2. Keyword density (0.25): the core subject appears naturally and sufficiently
+3. Emotional appeal (0.25): vivid, relatable descriptions that engage the viewer
+4. Length fit (0.15): total word count suits {paragraph_number} paragraph(s) for a short video
+
+## Rules:
+- Return ONLY a single decimal number between 0.00 and 1.00 (e.g. 0.82)
+- Do not include any explanation, label, or extra text
+
+## Video Subject: {video_subject}
+
+## Script:
+{current}
+""".strip()
+
+        raw = _generate_response(score_prompt)
+        try:
+            match = re.search(r"\b(1\.0+|0\.\d+)\b", raw)
+            score = float(match.group()) if match else 1.0
+        except Exception:
+            score = 1.0  # parse failure → treat as passing, avoid unnecessary rewrite
+        logger.info(f"Critic Agent iteration {i + 1}: score={score:.2f} (threshold={score_threshold})")
+
+        if score >= score_threshold:
+            logger.success(f"Script passed critic evaluation (score={score:.2f})")
+            break
+
+        rewrite_prompt = f"""
+# Role: Video Script Rewriter
+
+## Task:
+Rewrite the following video script{lang_hint} to score above {score_threshold:.2f} on these criteria:
+1. Logical coherence: ensure clear narrative flow between paragraphs
+2. Keyword density: naturally weave the subject into every paragraph
+3. Emotional appeal: add vivid, concrete details that resonate with viewers
+4. Length fit: keep exactly {paragraph_number} paragraph(s)
+
+## Rules:
+1. Return ONLY the raw script text — no titles, labels, or markdown
+2. Use the same language as the original
+3. Do not mention this rewrite task or the scoring criteria
+
+## Video Subject: {video_subject}
+
+## Original Script:
+{current}
+""".strip()
+
+        rewritten = _generate_response(rewrite_prompt)
+        if rewritten and "Error:" not in rewritten:
+            rewritten = rewritten.strip()
+            # strip markdown artefacts (same cleanup as generate_script)
+            rewritten = rewritten.replace("*", "").replace("#", "")
+            rewritten = re.sub(r"\[.*?\]", "", rewritten)
+            rewritten = re.sub(r"\(.*?\)", "", rewritten)
+            current = rewritten
+            logger.info(f"Critic Agent iteration {i + 1}: script rewritten")
+        else:
+            logger.warning(f"Critic Agent iteration {i + 1}: rewrite failed, keeping previous version")
+            break
+
+    return current
+
+
 def generate_terms(video_subject: str, video_script: str, amount: int = 5) -> List[str]:
     prompt = f"""
 # Role: Video Search Terms Generator

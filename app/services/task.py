@@ -31,6 +31,16 @@ def generate_script(task_id, params):
         logger.error("failed to generate video script.")
         return None
 
+    if config.app.get("critic_enabled", False):
+        video_script = llm.critique_script(
+            video_script=video_script,
+            video_subject=params.video_subject,
+            language=params.video_language,
+            paragraph_number=params.paragraph_number or 1,
+            score_threshold=config.app.get("critic_score_threshold", 0.75),
+            max_iterations=config.app.get("critic_max_iterations", 2),
+        )
+
     return video_script
 
 

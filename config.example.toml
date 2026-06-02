@@ -231,6 +231,15 @@ max_concurrent_tasks = 5
 # 并发任务已满后的最大排队任务数，超过后接口返回 429，避免匿名请求无限堆积
 max_queued_tasks = 100
 
+# Critic Agent: auto-evaluate and rewrite generated scripts
+# When enabled, scores each script after generation (0.0–1.0) and rewrites it
+# if the score falls below the threshold — up to critic_max_iterations times.
+# Adds at most 2 extra LLM calls per video (~$0.002/video with GPT-4o-mini).
+# Set critic_enabled = true in your config.toml to activate.
+critic_enabled = false
+critic_score_threshold = 0.75
+critic_max_iterations = 2
+
 
 [whisper]
 # Only effective when subtitle_provider is "whisper"
