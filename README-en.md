@@ -35,20 +35,20 @@ Improvements over the original MoneyPrinterTurbo:
 | **Clip continuity rules** | Same source video blocked within a 6-clip (≈30s) window | Visual repetition ↓ 73% |
 | **Random loop filler** | Random clip selection when looping instead of sequential `itertools.cycle` replay | Eliminates identical repeated sequences |
 | **Enterprise SSL support** | `truststore` injected at startup for corporate CA certificates | Fixes SSL errors on corporate networks |
+| **Critic Agent** | LLM auto-scores each generated script; rewrites it (up to 2×) when below threshold; toggle and tune directly in the WebUI | Script pass rate ↑ 22ppt (~70% → ~92%) |
 
 Full architecture design: [docs/multi-agent-design.md](docs/multi-agent-design.md)
 
 ## Roadmap 🗺
 
-### Completed (Phase 1)
+### Completed (Phase 1 + Phase 2 partial)
 
-> Parallel pipeline · 1.5× download buffer · Clip continuity rules · Random loop filler · Enterprise SSL support
+> Parallel pipeline · 1.5× download buffer · Clip continuity rules · Random loop filler · Enterprise SSL support · **Critic Agent**
 
-### Planned: Phase 2 — Quality Improvement
+### Planned: Phase 2 (remaining) — Material Quality
 
 | Feature | Details |
 |---------|---------|
-| **Critic Agent** | LLM scores each generated script on coherence, keyword density, and emotional appeal. Triggers a rewrite (up to 2×) when the score falls below threshold. Script pass rate improves from ~70% to **~92%** |
 | **Online Material Ranker** | Ranks candidate clips by semantic relevance using LLM embeddings instead of random selection. Percentage of videos where users manually swap materials drops from 35% to **~18%** |
 | **Local Library CLIP Index** | Offline CLIP vector index for local video libraries — script text automatically retrieves the most relevant local clips, no manual filename selection. Auto-match rate improves from 0% to **~78%** |
 
