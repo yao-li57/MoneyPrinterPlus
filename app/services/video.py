@@ -1,5 +1,4 @@
 import glob
-import itertools
 import io
 import os
 import random
@@ -47,6 +46,22 @@ class SubClippedVideoClip:
 
     def __str__(self):
         return f"SubClippedVideoClip(file_path={self.file_path}, start_time={self.start_time}, end_time={self.end_time}, duration={self.duration}, width={self.width}, height={self.height})"
+
+
+def _apply_continuity_rules(clips):
+    """Reorder clips so the same source video doesn't appear within a 6-clip window."""
+    if len(clips) <= 1:
+        return clips
+    result = [clips[0]]
+    skipped = []
+    for clip in clips[1:]:
+        recent = {c.file_path for c in result[-6:]}
+        if clip.file_path in recent:
+            skipped.append(clip)
+        else:
+            result.append(clip)
+    result.extend(skipped)
+    return result
 
 
 audio_codec = "aac"
@@ -334,6 +349,7 @@ def combine_videos(
     # random subclipped_items order
     if video_concat_mode.value == VideoConcatMode.random.value:
         random.shuffle(subclipped_items)
+        subclipped_items = _apply_continuity_rules(subclipped_items)
         
     logger.debug(f"total subclipped items: {len(subclipped_items)}")
     
@@ -413,11 +429,10 @@ def combine_videos(
     if video_duration < audio_duration:
         logger.warning(f"video duration ({video_duration:.2f}s) is shorter than audio duration ({audio_duration:.2f}s), looping clips to match audio length.")
         base_clips = processed_clips.copy()
-        for clip in itertools.cycle(base_clips):
-            if video_duration >= audio_duration:
-                break
-            processed_clips.append(clip)
-            video_duration += clip.duration
+        while video_duration < audio_duration:
+            filler = random.choice(base_clips)
+            processed_clips.append(filler)
+            video_duration += filler.duration
         logger.info(f"video duration: {video_duration:.2f}s, audio duration: {audio_duration:.2f}s, looped {len(processed_clips)-len(base_clips)} clips")
      
     # merge video clips progressively, avoid loading all videos at once to avoid memory overflow

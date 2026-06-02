@@ -281,7 +281,7 @@ def download_videos(
                 video_paths.append(saved_video_path)
                 seconds = min(max_clip_duration, item.duration)
                 total_duration += seconds
-                if total_duration > audio_duration:
+                if total_duration > audio_duration * 1.5:
                     logger.info(
                         f"total duration of downloaded videos: {total_duration} seconds, skip downloading more"
                     )

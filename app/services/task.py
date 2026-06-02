@@ -1,6 +1,7 @@
 import math
 import os.path
 import re
+from concurrent.futures import ThreadPoolExecutor
 from os import path
 
 from loguru import logger
@@ -247,7 +248,7 @@ def generate_final_videos(
 
 def start(task_id, params: VideoParams, stop_at: str = "video"):
     logger.info(f"start task: {task_id}, stop_at: {stop_at}")
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5, step="script")
 
     # 1. Generate script
     video_script = generate_script(task_id, params)
@@ -263,11 +264,36 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"script": video_script}
 
-    # 2. Generate terms
+    # 2+3: Generate terms and audio
+    # terms and TTS are independent — run in parallel when both are needed.
+    audio_file, audio_duration, sub_maker = None, None, None
     video_terms = ""
-    if params.video_source != "local":
+
+    if params.video_source != "local" and stop_at != "terms":
+        sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="terms_and_tts")
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            terms_future = executor.submit(generate_terms, task_id, params, video_script)
+            audio_future = executor.submit(generate_audio, task_id, params, video_script)
+        video_terms = terms_future.result()
+        if not video_terms:
+            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            return
+        audio_file, audio_duration, sub_maker = audio_future.result()
+        if not audio_file:
+            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            return
+    elif params.video_source != "local":
+        # stop_at == "terms": only terms needed
+        sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="terms")
         video_terms = generate_terms(task_id, params, video_script)
         if not video_terms:
+            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            return
+    else:
+        # local source: only TTS needed
+        sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="tts")
+        audio_file, audio_duration, sub_maker = generate_audio(task_id, params, video_script)
+        if not audio_file:
             sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
             return
 
@@ -278,16 +304,6 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             task_id, state=const.TASK_STATE_COMPLETE, progress=100, terms=video_terms
         )
         return {"script": video_script, "terms": video_terms}
-
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=20)
-
-    # 3. Generate audio
-    audio_file, audio_duration, sub_maker = generate_audio(
-        task_id, params, video_script
-    )
-    if not audio_file:
-        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-        return
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=30)
 
@@ -300,10 +316,21 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"audio_file": audio_file, "audio_duration": audio_duration}
 
-    # 4. Generate subtitle
-    subtitle_path = generate_subtitle(
-        task_id, params, video_script, sub_maker, audio_file
-    )
+    # 4+5: Generate subtitle and fetch materials in parallel — both depend only on TTS output.
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=35, step="subtitle_and_material")
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        subtitle_future = executor.submit(
+            generate_subtitle, task_id, params, video_script, sub_maker, audio_file
+        )
+        materials_future = executor.submit(
+            get_video_materials, task_id, params, video_terms, audio_duration
+        )
+    subtitle_path = subtitle_future.result()
+    downloaded_videos = materials_future.result()
+
+    if not downloaded_videos:
+        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+        return
 
     if stop_at == "subtitle":
         sm.state.update_task(
@@ -314,16 +341,6 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"subtitle_path": subtitle_path}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=40)
-
-    # 5. Get video materials
-    downloaded_videos = get_video_materials(
-        task_id, params, video_terms, audio_duration
-    )
-    if not downloaded_videos:
-        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-        return
-
     if stop_at == "materials":
         sm.state.update_task(
             task_id,
@@ -333,7 +350,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         )
         return {"materials": downloaded_videos}
 
-    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=50)
+    sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=50, step="compose")
 
     # 仅完整视频生成流程才需要处理视频拼接模式；
     # 这样可以避免 /subtitle 和 /audio 这类请求访问不存在的字段。
