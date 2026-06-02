@@ -10,9 +10,7 @@ from loguru import logger
 root_dir = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
 if root_dir not in sys.path:
     sys.path.append(root_dir)
-    print("******** sys.path ********")
-    print(sys.path)
-    print("")
+    logger.debug(f"sys.path updated: {root_dir}")
 
 from app.config import config
 from app.models.schema import (
@@ -486,6 +484,33 @@ if not config.app.get("hide_config", False):
                 )
                 if st_llm_account_id:
                     config.app[f"{llm_provider}_account_id"] = st_llm_account_id
+
+            st.write(tr("Critic Agent Settings"))
+            critic_enabled = st.checkbox(
+                tr("Enable Critic Agent"),
+                value=config.app.get("critic_enabled", False),
+                help=tr("Critic Agent Help"),
+            )
+            config.app["critic_enabled"] = critic_enabled
+            if critic_enabled:
+                critic_score_threshold = st.slider(
+                    tr("Score Threshold"),
+                    min_value=0.50,
+                    max_value=1.00,
+                    value=float(config.app.get("critic_score_threshold", 0.75)),
+                    step=0.05,
+                    help=tr("Score Threshold Help"),
+                )
+                config.app["critic_score_threshold"] = critic_score_threshold
+                critic_max_iterations = st.number_input(
+                    tr("Max Rewrites"),
+                    min_value=1,
+                    max_value=5,
+                    value=int(config.app.get("critic_max_iterations", 2)),
+                    step=1,
+                    help=tr("Max Rewrites Help"),
+                )
+                config.app["critic_max_iterations"] = int(critic_max_iterations)
 
         # 右侧面板 - API 密钥设置
         with right_config_panel:

@@ -100,6 +100,13 @@
     "Hide Log": "Günlüğü Gizle",
     "Hide Basic Settings": "Temel Ayarları Gizle\n\nGizlendiği takdirde, temel ayarlar paneli sayfada görüntülenmeyecektir.\n\nTekrar görüntülemek için `config.toml` dosyasında `hide_config = false` olarak ayarlayın",
     "LLM Settings": "**LLM Ayarları**",
-    "Video Source Settings": "**Video Kaynağı Ayarları**"
+    "Video Source Settings": "**Video Kaynağı Ayarları**",
+    "Critic Agent Settings": "**Critic Agent Ayarları**",
+    "Enable Critic Agent": "Critic Agent'ı Etkinleştir",
+    "Critic Agent Help": "Etkinleştirildiğinde, oluşturulan her senaryo otomatik olarak puanlanır (0–1). Puan eşiğin altındaysa senaryo Maks. Yeniden Yazma kez yeniden yazılır",
+    "Score Threshold": "Puan Eşiği",
+    "Score Threshold Help": "Bu değerin altındaki senaryolar yeniden yazılır. Aralık 0,5–1,0, varsayılan 0,75",
+    "Max Rewrites": "Maks. Yeniden Yazma",
+    "Max Rewrites Help": "Puan eşiğin altındayken maksimum yeniden yazma sayısı"
   }
 }

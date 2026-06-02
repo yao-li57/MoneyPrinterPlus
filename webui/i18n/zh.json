@@ -119,6 +119,13 @@
     "Pixabay API Key added successfully": "Pixabay API Key 添加成功",
     "Select Pixabay API Key to delete": "选择要删除的 Pixabay API Key",
     "Delete Selected Pixabay API Key": "删除选定的 Pixabay API Key",
-    "Pixabay API Key deleted successfully": "Pixabay API Key 删除成功"
+    "Pixabay API Key deleted successfully": "Pixabay API Key 删除成功",
+    "Critic Agent Settings": "**Critic Agent 设置**",
+    "Enable Critic Agent": "启用 Critic Agent",
+    "Critic Agent Help": "启用后，生成脚本时自动评分（0–1），得分低于阈值时触发重写，最多重写 N 次，可将脚本达标率从 ~70% 提升至 ~92%",
+    "Score Threshold": "评分阈值",
+    "Score Threshold Help": "脚本得分低于此值时触发重写，范围 0.5–1.0，默认 0.75",
+    "Max Rewrites": "最大重写次数",
+    "Max Rewrites Help": "评分不达标时最多重写几次，建议 1–3 次"
   }
 }

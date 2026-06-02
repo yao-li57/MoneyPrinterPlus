@@ -117,6 +117,13 @@
     "Pixabay API Key added successfully": "Thêm API Key Pixabay thành công",
     "Select Pixabay API Key to delete": "Chọn API Key Pixabay để xóa",
     "Delete Selected Pixabay API Key": "Xóa API Key Pixabay đã chọn",
-    "Pixabay API Key deleted successfully": "Xóa API Key Pixabay thành công"
+    "Pixabay API Key deleted successfully": "Xóa API Key Pixabay thành công",
+    "Critic Agent Settings": "**Cài đặt Critic Agent**",
+    "Enable Critic Agent": "Bật Critic Agent",
+    "Critic Agent Help": "Khi bật, mỗi kịch bản được tạo sẽ tự động được chấm điểm (0–1). Nếu điểm thấp hơn ngưỡng, kịch bản sẽ được viết lại tối đa Số lần Viết lại lần",
+    "Score Threshold": "Ngưỡng Điểm số",
+    "Score Threshold Help": "Kịch bản dưới giá trị này sẽ được viết lại. Phạm vi 0,5–1,0, mặc định 0,75",
+    "Max Rewrites": "Số lần Viết lại Tối đa",
+    "Max Rewrites Help": "Số lần viết lại tối đa khi điểm dưới ngưỡng"
   }
 }

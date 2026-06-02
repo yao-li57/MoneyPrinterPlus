@@ -117,6 +117,13 @@
     "Pixabay API Key added successfully": "Pixabay-API-Schlüssel erfolgreich hinzugefügt",
     "Select Pixabay API Key to delete": "Wählen Sie den zu löschenden Pixabay-API-Schlüssel aus",
     "Delete Selected Pixabay API Key": "Ausgewählten Pixabay-API-Schlüssel löschen",
-    "Pixabay API Key deleted successfully": "Pixabay-API-Schlüssel erfolgreich gelöscht"
+    "Pixabay API Key deleted successfully": "Pixabay-API-Schlüssel erfolgreich gelöscht",
+    "Critic Agent Settings": "**Critic Agent Einstellungen**",
+    "Enable Critic Agent": "Critic Agent aktivieren",
+    "Critic Agent Help": "Wenn aktiviert, wird jedes generierte Skript automatisch bewertet (0–1). Liegt die Bewertung unter dem Schwellenwert, wird das Skript bis zu Max. Umschreibungen überarbeitet",
+    "Score Threshold": "Bewertungsschwellenwert",
+    "Score Threshold Help": "Skripte unterhalb dieses Werts werden umgeschrieben. Bereich 0,5–1,0, Standard 0,75",
+    "Max Rewrites": "Max. Umschreibungen",
+    "Max Rewrites Help": "Maximale Anzahl von Umschreibungsiterationen"
   }
 }

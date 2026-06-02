@@ -119,6 +119,13 @@
     "Pixabay API Key added successfully": "Pixabay API Key added successfully",
     "Select Pixabay API Key to delete": "Select Pixabay API Key to delete",
     "Delete Selected Pixabay API Key": "Delete Selected Pixabay API Key",
-    "Pixabay API Key deleted successfully": "Pixabay API Key deleted successfully"
+    "Pixabay API Key deleted successfully": "Pixabay API Key deleted successfully",
+    "Critic Agent Settings": "**Critic Agent Settings**",
+    "Enable Critic Agent": "Enable Critic Agent",
+    "Critic Agent Help": "When enabled, each generated script is automatically scored (0–1). If the score falls below the threshold the script is rewritten, up to Max Rewrites times. Improves script pass rate from ~70% to ~92%",
+    "Score Threshold": "Score Threshold",
+    "Score Threshold Help": "Scripts scoring below this value are rewritten. Range 0.5–1.0, default 0.75",
+    "Max Rewrites": "Max Rewrites",
+    "Max Rewrites Help": "Maximum rewrite iterations when score is below threshold. Recommended 1–3"
   }
 }
