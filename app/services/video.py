@@ -172,6 +172,23 @@ def _open_image_clip_with_fallback(image_path: str):
         return ImageClip(sanitized_path), sanitized_path
 
 
+def _write_videofile_quietly(clip, output_path: str, **kwargs):
+    """
+    安静地写出视频文件，避免 MoviePy 在 Windows cp1252 终端上因
+    内部 print() 调用触发 UnicodeEncodeError。
+    与 _open_video_clip_quietly 采用相同的 redirect_stdout 方案。
+    """
+    captured_stdout = io.StringIO()
+    with redirect_stdout(captured_stdout):
+        clip.write_videofile(output_path, **kwargs)
+    moviepy_stdout = captured_stdout.getvalue().strip()
+    if moviepy_stdout:
+        logger.debug(
+            f"suppressed MoviePy writer stdout for {output_path}, "
+            f"chars: {len(moviepy_stdout)}"
+        )
+
+
 def _open_video_clip_quietly(video_path: str, audio: bool = False) -> VideoFileClip:
     """
     安静地打开视频文件，避免 MoviePy 2.1.x 把 ffmpeg 探测信息直接打印到 stdout。
@@ -413,7 +430,7 @@ def combine_videos(
                 
             # wirte clip to temp file
             clip_file = f"{output_dir}/temp-clip-{i+1}.mp4"
-            clip.write_videofile(clip_file, logger=None, fps=fps, codec=video_codec)
+            _write_videofile_quietly(clip, clip_file, logger=None, fps=fps, codec=video_codec)
 
             # Store clip duration before closing
             clip_duration_saved = clip.duration
@@ -652,7 +669,8 @@ def generate_video(
     # 显式沿用输入音频的采样率；如果取不到，再回退到 MoviePy 默认的 44100Hz。
     # 这样可以减少不同运行环境，尤其是 Docker 环境中再次重采样带来的音质波动。
     output_audio_fps = int(getattr(audio_clip, "fps", 0) or 44100)
-    video_clip.write_videofile(
+    _write_videofile_quietly(
+        video_clip,
         output_file,
         audio_codec=audio_codec,
         audio_fps=output_audio_fps,
@@ -747,7 +765,7 @@ def preprocess_video(materials: List[MaterialInfo], clip_duration=4):
 
                 # Output the video to a file.
                 video_file = f"{material_source_path}.mp4"
-                final_clip.write_videofile(video_file, fps=30, logger=None)
+                _write_videofile_quietly(final_clip, video_file, fps=30, logger=None)
                 close_clip(clip)
                 close_clip(final_clip)
                 material.url = video_file
