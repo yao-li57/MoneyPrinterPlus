@@ -283,9 +283,8 @@ def download_videos(
     total_duration = 0.0
     n_cached = 0
     n_downloaded = 0
-    need_download = []
 
-    # Pass 1: collect from cache instantly (no network)
+    # Single pass in ranked order: cache hit → use directly, miss → download
     for item in valid_video_items:
         if total_duration > audio_duration * 1.5:
             break
@@ -297,18 +296,12 @@ def download_videos(
             total_duration += min(max_clip_duration, item.duration)
             n_cached += 1
         else:
-            need_download.append(item)
-
-    # Pass 2: download only what's still needed
-    for item in need_download:
-        if total_duration > audio_duration * 1.5:
-            break
-        saved_video_path = _save_video_with_retry(item.url, material_directory)
-        if saved_video_path:
-            video_paths.append(saved_video_path)
-            clip_term_map[saved_video_path] = item.title
-            total_duration += min(max_clip_duration, item.duration)
-            n_downloaded += 1
+            saved = _save_video_with_retry(item.url, material_directory)
+            if saved:
+                video_paths.append(saved)
+                clip_term_map[saved] = item.title
+                total_duration += min(max_clip_duration, item.duration)
+                n_downloaded += 1
 
     logger.success(f"collected {len(video_paths)} videos: {n_cached} from cache, {n_downloaded} downloaded")
 
