@@ -206,17 +206,17 @@ def save_video(video_url: str, save_dir: str = "") -> str:
         try:
             clip = VideoFileClip(video_path)
             duration = clip.duration
-            fps = clip.fps
-            if duration > 0 and fps > 0:
+            # fps can be None for variable-frame-rate videos; FFmpeg handles
+            # them fine, so only require a positive duration.
+            if duration and duration > 0:
                 return video_path
+            logger.warning(f"video has zero duration, removing: {video_path}")
         except Exception as e:
             logger.warning(f"invalid video file: {video_path} => {str(e)}")
             try:
                 os.remove(video_path)
-            except Exception as remove_error:
-                logger.warning(
-                    f"failed to remove invalid video file: {video_path}, error: {str(remove_error)}"
-                )
+            except Exception:
+                pass
         finally:
             if clip is not None:
                 try:
