@@ -124,6 +124,12 @@
     "Score Threshold": "Ngưỡng Điểm số",
     "Score Threshold Help": "Kịch bản dưới giá trị này sẽ được viết lại. Phạm vi 0,5–1,0, mặc định 0,75",
     "Max Rewrites": "Số lần Viết lại Tối đa",
-    "Max Rewrites Help": "Số lần viết lại tối đa khi điểm dưới ngưỡng"
+    "Max Rewrites Help": "Số lần viết lại tối đa khi điểm dưới ngưỡng",
+    "Material Ranker Settings": "**Cài đặt Xếp hạng Tư liệu**",
+    "Enable Material Ranker": "Bật Xếp hạng Tư liệu",
+    "Material Ranker Help": "Xếp hạng video ứng viên theo mức độ liên quan ngữ nghĩa. Giảm tỷ lệ thay thủ công từ ~35% xuống ~18%.",
+    "Semantic Alignment Settings": "**Căn chỉnh Ngữ nghĩa**",
+    "Enable Semantic Alignment": "Bật Căn chỉnh Ngữ nghĩa",
+    "Semantic Alignment Help": "Sắp xếp lại các clip để nội dung hình ảnh khớp với phụ đề. Cải thiện độ liên quan từ ~2,1 lên ~3,5/5."
   }
 }

@@ -512,6 +512,22 @@ if not config.app.get("hide_config", False):
                 )
                 config.app["critic_max_iterations"] = int(critic_max_iterations)
 
+            st.write(tr("Material Ranker Settings"))
+            ranker_enabled = st.checkbox(
+                tr("Enable Material Ranker"),
+                value=config.app.get("ranker_enabled", True),
+                help=tr("Material Ranker Help"),
+            )
+            config.app["ranker_enabled"] = ranker_enabled
+
+            st.write(tr("Semantic Alignment Settings"))
+            semantic_alignment = st.checkbox(
+                tr("Enable Semantic Alignment"),
+                value=config.app.get("semantic_alignment", True),
+                help=tr("Semantic Alignment Help"),
+            )
+            config.app["semantic_alignment"] = semantic_alignment
+
         # 右侧面板 - API 密钥设置
         with right_config_panel:
 

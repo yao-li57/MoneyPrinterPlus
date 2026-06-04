@@ -124,6 +124,12 @@
     "Score Threshold": "Bewertungsschwellenwert",
     "Score Threshold Help": "Skripte unterhalb dieses Werts werden umgeschrieben. Bereich 0,5–1,0, Standard 0,75",
     "Max Rewrites": "Max. Umschreibungen",
-    "Max Rewrites Help": "Maximale Anzahl von Umschreibungsiterationen"
+    "Max Rewrites Help": "Maximale Anzahl von Umschreibungsiterationen",
+    "Material Ranker Settings": "**Material-Ranker-Einstellungen**",
+    "Enable Material Ranker": "Material-Ranker aktivieren",
+    "Material Ranker Help": "Ordnet Kandidatenvideos nach semantischer Relevanz zum Videosubjekt — reduziert manuellen Materialwechsel von ~35% auf ~18%.",
+    "Semantic Alignment Settings": "**Semantische Ausrichtung**",
+    "Enable Semantic Alignment": "Semantische Ausrichtung aktivieren",
+    "Semantic Alignment Help": "Ordnet Videoclips neu, damit der Inhalt mit dem Untertitel übereinstimmt. Verbessert die Bild-Untertitel-Relevanz von ~2,1 auf ~3,5/5."
   }
 }

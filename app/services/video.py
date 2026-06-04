@@ -1,12 +1,15 @@
 import glob
 import io
+import json
+import math
 import os
 import random
 import gc
+import re
 import shutil
 import subprocess
 from contextlib import redirect_stdout
-from typing import List
+from typing import Dict, List
 from loguru import logger
 from moviepy import (
     AudioFileClip,
@@ -62,6 +65,99 @@ def _apply_continuity_rules(clips):
             result.append(clip)
     result.extend(skipped)
     return result
+
+
+def _count_word_overlap(text: str, term: str) -> int:
+    text_words = set(re.findall(r"\w+", text.lower()))
+    term_words = set(re.findall(r"\w+", term.lower()))
+    return len(text_words & term_words)
+
+
+def _srt_time_to_seconds(time_str: str) -> float:
+    """Convert SRT timestamp 'HH:MM:SS,mmm' to float seconds."""
+    time_str = time_str.strip().replace(",", ".")
+    parts = time_str.split(":")
+    h, m, s = int(parts[0]), int(parts[1]), float(parts[2])
+    return h * 3600 + m * 60 + s
+
+
+def align_clips_to_subtitles(
+    subtitle_path: str,
+    downloaded_videos: List[str],
+    clip_term_map: Dict[str, str],
+    max_clip_duration: int = 5,
+) -> List[str]:
+    """
+    Reorder downloaded_videos so clips semantically matching each subtitle
+    segment appear at the right position in the timeline.
+
+    Returns a list of file paths (may contain duplicates) suitable for
+    combine_videos() in sequential mode.
+    """
+    if not subtitle_path or not os.path.exists(subtitle_path):
+        return downloaded_videos
+
+    from app.services import subtitle as subtitle_svc
+
+    segments = subtitle_svc.file_to_subtitles(subtitle_path)
+    if not segments:
+        return downloaded_videos
+
+    # Parse each segment's time window
+    parsed_segments = []
+    for idx, times_str, text in segments:
+        try:
+            start_str, end_str = times_str.split("-->")
+            start_s = _srt_time_to_seconds(start_str)
+            end_s = _srt_time_to_seconds(end_str)
+            parsed_segments.append((start_s, end_s, text))
+        except Exception:
+            continue
+
+    if not parsed_segments:
+        return downloaded_videos
+
+    total_duration = parsed_segments[-1][1]
+    n_slots = max(1, math.ceil(total_duration / max_clip_duration))
+
+    unique_terms = list(dict.fromkeys(clip_term_map.values()))
+    term_to_clips: Dict[str, List[str]] = {t: [] for t in unique_terms}
+    for path, term in clip_term_map.items():
+        if path in downloaded_videos:
+            term_to_clips.setdefault(term, []).append(path)
+
+    def best_term_for_slot(slot_idx: int) -> str:
+        slot_start = slot_idx * max_clip_duration
+        slot_end = slot_start + max_clip_duration
+        slot_text = " ".join(
+            text for s, e, text in parsed_segments
+            if s < slot_end and e > slot_start
+        )
+        if not slot_text or not unique_terms:
+            return unique_terms[slot_idx % len(unique_terms)] if unique_terms else ""
+        return max(unique_terms, key=lambda t: _count_word_overlap(slot_text, t))
+
+    ordered: List[str] = []
+    term_usage: Dict[str, int] = {t: 0 for t in unique_terms}
+    for slot in range(n_slots):
+        term = best_term_for_slot(slot)
+        clips = term_to_clips.get(term, [])
+        if not clips:
+            # Fallback: any clip not yet used, or cycle
+            clips = downloaded_videos
+        idx = term_usage.get(term, 0) % len(clips)
+        ordered.append(clips[idx])
+        term_usage[term] = term_usage.get(term, 0) + 1
+
+    # Append any clips from the pool not yet referenced, so they can be
+    # used as fallback if combine_videos needs more material.
+    referenced = set(ordered)
+    for p in downloaded_videos:
+        if p not in referenced:
+            ordered.append(p)
+
+    logger.info(f"align_clips_to_subtitles: {n_slots} slots aligned from {len(downloaded_videos)} clips")
+    return ordered
 
 
 audio_codec = "aac"

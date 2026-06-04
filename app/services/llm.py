@@ -687,6 +687,65 @@ Please note that you must use English for generating video search terms; Chinese
     return search_terms
 
 
+def rank_video_candidates(candidates, video_subject: str, video_terms: List[str]):
+    """
+    Given a list of MaterialInfo candidates (each tagged with .title = search_term),
+    ask the LLM to rank the search terms by relevance to video_subject, then reorder
+    the candidates accordingly. Falls back to original order on any error.
+    """
+    if not candidates or not video_subject:
+        return candidates
+
+    unique_terms = list(dict.fromkeys(item.title for item in candidates if item.title))
+    if len(unique_terms) < 2:
+        return candidates
+
+    terms_json = json.dumps(unique_terms, ensure_ascii=False)
+    prompt = f"""
+# Role: Video Material Relevance Ranker
+
+## Task
+Rank the following video search terms by their relevance to the video subject.
+Return a JSON array of the terms in order from MOST to LEAST relevant.
+You must return ONLY the JSON array, nothing else.
+
+## Video Subject
+{video_subject}
+
+## Search Terms to Rank
+{terms_json}
+
+## Output Example
+["most relevant term", "second term", "third term"]
+""".strip()
+
+    try:
+        response = _generate_response(prompt)
+        if not response or "Error: " in response:
+            logger.warning(f"rank_video_candidates: LLM error, using original order")
+            return candidates
+
+        match = re.search(r"\[.*\]", response, re.DOTALL)
+        if not match:
+            logger.warning(f"rank_video_candidates: no JSON array found, using original order")
+            return candidates
+
+        ranked_terms = json.loads(match.group())
+        if not isinstance(ranked_terms, list):
+            return candidates
+
+        term_order = {term: i for i, term in enumerate(ranked_terms)}
+        sorted_candidates = sorted(
+            candidates,
+            key=lambda item: term_order.get(item.title, len(ranked_terms))
+        )
+        logger.info(f"rank_video_candidates: ranked {len(unique_terms)} terms => {ranked_terms}")
+        return sorted_candidates
+    except Exception as e:
+        logger.warning(f"rank_video_candidates failed, using original order: {e}")
+        return candidates
+
+
 if __name__ == "__main__":
     video_subject = "生命的意义是什么"
     script = generate_script(

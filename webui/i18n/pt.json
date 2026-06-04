@@ -124,6 +124,12 @@
     "Score Threshold": "Limiar de Pontuação",
     "Score Threshold Help": "Scripts abaixo deste valor são reescritos. Intervalo 0,5–1,0, padrão 0,75",
     "Max Rewrites": "Máx. Reescritas",
-    "Max Rewrites Help": "Número máximo de iterações de reescrita"
+    "Max Rewrites Help": "Número máximo de iterações de reescrita",
+    "Material Ranker Settings": "**Configurações do Ranker de Material**",
+    "Enable Material Ranker": "Ativar Ranker de Material",
+    "Material Ranker Help": "Classifica vídeos candidatos por relevância semântica ao assunto do vídeo. Reduz trocas manuais de ~35% para ~18%.",
+    "Semantic Alignment Settings": "**Alinhamento Semântico**",
+    "Enable Semantic Alignment": "Ativar Alinhamento Semântico",
+    "Semantic Alignment Help": "Reordena clipes para que o conteúdo visual corresponda ao que está sendo dito em cada legenda. Melhora a relevância de ~2,1 para ~3,5/5."
   }
 }

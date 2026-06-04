@@ -1,6 +1,9 @@
+import json
 import math
+import os
 import os.path
 import re
+import time
 from concurrent.futures import ThreadPoolExecutor
 from os import path
 
@@ -12,6 +15,70 @@ from app.models.schema import VideoConcatMode, VideoParams
 from app.services import llm, material, subtitle, video, voice, upload_post
 from app.services import state as sm
 from app.utils import utils
+
+
+def _retry(fn, *args, max_attempts: int = 3, **kwargs):
+    """Call fn(*args, **kwargs) up to max_attempts times with exponential backoff."""
+    for attempt in range(max_attempts):
+        try:
+            result = fn(*args, **kwargs)
+            if result is not None:
+                return result
+        except Exception as e:
+            if attempt < max_attempts - 1:
+                wait = 2 ** attempt
+                logger.warning(f"attempt {attempt + 1}/{max_attempts} failed: {e}, retrying in {wait}s")
+                time.sleep(wait)
+            else:
+                logger.error(f"all {max_attempts} attempts failed: {e}")
+    return None
+
+
+def _load_checkpoint(task_id: str) -> dict:
+    """
+    Detect already-completed intermediate files in task_dir and return
+    their values so start() can skip the corresponding steps.
+    """
+    task_dir = utils.task_dir(task_id)
+    checkpoint = {}
+
+    script_file = path.join(task_dir, "script.json")
+    if path.exists(script_file):
+        try:
+            with open(script_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            checkpoint["video_script"] = data.get("script")
+            checkpoint["video_terms"] = data.get("search_terms")
+            logger.info("checkpoint: script.json found, will skip script + terms generation")
+        except Exception as e:
+            logger.warning(f"checkpoint: failed to read script.json: {e}")
+
+    audio_file = path.join(task_dir, "audio.mp3")
+    if path.exists(audio_file):
+        checkpoint["audio_file"] = audio_file
+        logger.info("checkpoint: audio.mp3 found, will skip TTS")
+
+    subtitle_file = path.join(task_dir, "subtitle.srt")
+    if path.exists(subtitle_file):
+        checkpoint["subtitle_path"] = subtitle_file
+        logger.info("checkpoint: subtitle.srt found, will skip subtitle generation")
+
+    try:
+        mp4_files = [
+            path.join(task_dir, f)
+            for f in os.listdir(task_dir)
+            if f.endswith(".mp4")
+            and not f.startswith("combined")
+            and not f.startswith("final")
+            and not f.startswith("temp")
+        ]
+        if mp4_files:
+            checkpoint["downloaded_videos"] = mp4_files
+            logger.info(f"checkpoint: {len(mp4_files)} downloaded video(s) found, will skip material download")
+    except Exception:
+        pass
+
+    return checkpoint
 
 
 def generate_script(task_id, params):
@@ -104,7 +171,8 @@ def generate_audio(task_id, params, video_script):
         else:
             logger.info("no custom audio file provided, using TTS to generate audio.")
         audio_file = path.join(utils.task_dir(task_id), "audio.mp3")
-        sub_maker = voice.tts(
+        sub_maker = _retry(
+            voice.tts,
             text=video_script,
             voice_name=voice.parse_voice_name(params.voice_name),
             voice_rate=params.voice_rate,
@@ -160,7 +228,7 @@ def generate_subtitle(task_id, params, video_script, sub_maker, audio_file):
             logger.warning("subtitle file not found, fallback to whisper")
 
     if subtitle_provider == "whisper" or subtitle_fallback:
-        subtitle.create(audio_file=audio_file, subtitle_file=subtitle_path)
+        _retry(subtitle.create, audio_file=audio_file, subtitle_file=subtitle_path)
         logger.info("\n\n## correcting subtitle")
         subtitle.correct(subtitle_file=subtitle_path, video_script=video_script)
 
@@ -195,6 +263,7 @@ def get_video_materials(task_id, params, video_terms, audio_duration):
             video_contact_mode=params.video_concat_mode,
             audio_duration=audio_duration * params.video_count,
             max_clip_duration=params.video_clip_duration,
+            video_subject=params.video_subject,
         )
         if not downloaded_videos:
             sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
@@ -206,7 +275,7 @@ def get_video_materials(task_id, params, video_terms, audio_duration):
 
 
 def generate_final_videos(
-    task_id, params, downloaded_videos, audio_file, subtitle_path
+    task_id, params, downloaded_videos, audio_file, subtitle_path, video_terms=None
 ):
     final_video_paths = []
     combined_video_paths = []
@@ -214,6 +283,28 @@ def generate_final_videos(
         params.video_concat_mode if params.video_count == 1 else VideoConcatMode.random
     )
     video_transition_mode = params.video_transition_mode
+
+    # Semantic timeline alignment: reorder clips to match subtitle content
+    aligned_videos = downloaded_videos
+    semantic_alignment = config.app.get("semantic_alignment", True)
+    if semantic_alignment and subtitle_path and video_terms:
+        meta_path = path.join(utils.task_dir(task_id), "clips-meta.json")
+        if path.exists(meta_path):
+            try:
+                with open(meta_path, "r", encoding="utf-8") as f:
+                    clip_term_map = json.load(f)
+                aligned_videos = video.align_clips_to_subtitles(
+                    subtitle_path=subtitle_path,
+                    downloaded_videos=downloaded_videos,
+                    clip_term_map=clip_term_map,
+                    max_clip_duration=params.video_clip_duration,
+                )
+                video_concat_mode = VideoConcatMode.sequential
+                logger.info("semantic_alignment: clips reordered, using sequential mode")
+            except Exception as e:
+                logger.warning(f"semantic_alignment failed, using original clip order: {e}")
+        else:
+            logger.debug("semantic_alignment: clips-meta.json not found, skipping alignment")
 
     _progress = 50
     for i in range(params.video_count):
@@ -224,7 +315,7 @@ def generate_final_videos(
         logger.info(f"\n\n## combining video: {index} => {combined_video_path}")
         video.combine_videos(
             combined_video_path=combined_video_path,
-            video_paths=downloaded_videos,
+            video_paths=aligned_videos,
             audio_file=audio_file,
             video_aspect=params.video_aspect,
             video_concat_mode=video_concat_mode,
@@ -260,11 +351,18 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     logger.info(f"start task: {task_id}, stop_at: {stop_at}")
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5, step="script")
 
+    # Load checkpoint: skip steps whose output files already exist on disk
+    checkpoint = _load_checkpoint(task_id)
+
     # 1. Generate script
-    video_script = generate_script(task_id, params)
-    if not video_script or "Error: " in video_script:
-        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-        return
+    if checkpoint.get("video_script"):
+        video_script = checkpoint["video_script"]
+        logger.info("checkpoint: reusing existing script")
+    else:
+        video_script = generate_script(task_id, params)
+        if not video_script or "Error: " in video_script:
+            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            return
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=10)
 
@@ -277,35 +375,59 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     # 2+3: Generate terms and audio
     # terms and TTS are independent — run in parallel when both are needed.
     audio_file, audio_duration, sub_maker = None, None, None
-    video_terms = ""
+    video_terms = checkpoint.get("video_terms") or ""
+
+    # Restore audio from checkpoint if available
+    checkpoint_audio = checkpoint.get("audio_file")
+    if checkpoint_audio:
+        audio_file = checkpoint_audio
+        audio_duration = math.ceil(voice.get_audio_duration(audio_file))
+        # sub_maker stays None; subtitle generation will fall back to Whisper if needed
 
     if params.video_source != "local" and stop_at != "terms":
         sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="terms_and_tts")
-        with ThreadPoolExecutor(max_workers=2) as executor:
-            terms_future = executor.submit(generate_terms, task_id, params, video_script)
-            audio_future = executor.submit(generate_audio, task_id, params, video_script)
-        video_terms = terms_future.result()
-        if not video_terms:
-            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-            return
-        audio_file, audio_duration, sub_maker = audio_future.result()
-        if not audio_file:
-            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-            return
+        need_terms = not video_terms
+        need_audio = not audio_file
+        if need_terms and need_audio:
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                terms_future = executor.submit(generate_terms, task_id, params, video_script)
+                audio_future = executor.submit(generate_audio, task_id, params, video_script)
+            video_terms = terms_future.result()
+            if not video_terms:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
+            audio_file, audio_duration, sub_maker = audio_future.result()
+            if not audio_file:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
+        elif need_terms:
+            video_terms = generate_terms(task_id, params, video_script)
+            if not video_terms:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
+        elif need_audio:
+            audio_file, audio_duration, sub_maker = generate_audio(task_id, params, video_script)
+            if not audio_file:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
+        else:
+            logger.info("checkpoint: reusing existing audio and terms")
     elif params.video_source != "local":
         # stop_at == "terms": only terms needed
         sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="terms")
-        video_terms = generate_terms(task_id, params, video_script)
         if not video_terms:
-            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-            return
+            video_terms = generate_terms(task_id, params, video_script)
+            if not video_terms:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
     else:
         # local source: only TTS needed
         sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="tts")
-        audio_file, audio_duration, sub_maker = generate_audio(task_id, params, video_script)
         if not audio_file:
-            sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
-            return
+            audio_file, audio_duration, sub_maker = generate_audio(task_id, params, video_script)
+            if not audio_file:
+                sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                return
 
     save_script_data(task_id, video_script, video_terms, params)
 
@@ -328,15 +450,34 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
 
     # 4+5: Generate subtitle and fetch materials in parallel — both depend only on TTS output.
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=35, step="subtitle_and_material")
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        subtitle_future = executor.submit(
-            generate_subtitle, task_id, params, video_script, sub_maker, audio_file
-        )
-        materials_future = executor.submit(
-            get_video_materials, task_id, params, video_terms, audio_duration
-        )
-    subtitle_path = subtitle_future.result()
-    downloaded_videos = materials_future.result()
+
+    checkpoint_subtitle = checkpoint.get("subtitle_path")
+    checkpoint_videos = checkpoint.get("downloaded_videos")
+    need_subtitle = not checkpoint_subtitle
+    need_materials = not checkpoint_videos
+
+    if need_subtitle and need_materials:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            subtitle_future = executor.submit(
+                generate_subtitle, task_id, params, video_script, sub_maker, audio_file
+            )
+            materials_future = executor.submit(
+                get_video_materials, task_id, params, video_terms, audio_duration
+            )
+        subtitle_path = subtitle_future.result()
+        downloaded_videos = materials_future.result()
+    elif need_subtitle:
+        logger.info("checkpoint: reusing existing downloaded videos")
+        downloaded_videos = checkpoint_videos
+        subtitle_path = generate_subtitle(task_id, params, video_script, sub_maker, audio_file)
+    elif need_materials:
+        logger.info("checkpoint: reusing existing subtitle")
+        subtitle_path = checkpoint_subtitle
+        downloaded_videos = get_video_materials(task_id, params, video_terms, audio_duration)
+    else:
+        logger.info("checkpoint: reusing existing subtitle and downloaded videos")
+        subtitle_path = checkpoint_subtitle
+        downloaded_videos = checkpoint_videos
 
     if not downloaded_videos:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
@@ -369,7 +510,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
 
     # 6. Generate final videos
     final_video_paths, combined_video_paths = generate_final_videos(
-        task_id, params, downloaded_videos, audio_file, subtitle_path
+        task_id, params, downloaded_videos, audio_file, subtitle_path, video_terms=video_terms
     )
 
     if not final_video_paths:

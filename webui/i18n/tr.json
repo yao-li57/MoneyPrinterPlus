@@ -107,6 +107,12 @@
     "Score Threshold": "Puan Eşiği",
     "Score Threshold Help": "Bu değerin altındaki senaryolar yeniden yazılır. Aralık 0,5–1,0, varsayılan 0,75",
     "Max Rewrites": "Maks. Yeniden Yazma",
-    "Max Rewrites Help": "Puan eşiğin altındayken maksimum yeniden yazma sayısı"
+    "Max Rewrites Help": "Puan eşiğin altındayken maksimum yeniden yazma sayısı",
+    "Material Ranker Settings": "**Malzeme Sıralama Ayarları**",
+    "Enable Material Ranker": "Malzeme Sıralamayı Etkinleştir",
+    "Material Ranker Help": "Video adaylarını konu ile anlamsal alaka düzeyine göre sıralar. Manuel değişimi ~35%'ten ~18%'e indirir.",
+    "Semantic Alignment Settings": "**Anlamsal Hizalama**",
+    "Enable Semantic Alignment": "Anlamsal Hizalamayı Etkinleştir",
+    "Semantic Alignment Help": "Klipleri altyazı içeriğiyle görsel içerik eşleşecek şekilde yeniden sıralar. Alaka düzeyini ~2,1'den ~3,5/5'e çıkarır."
   }
 }

@@ -1,6 +1,8 @@
+import json
 import os
 import random
 import threading
+import time
 from typing import List
 from urllib.parse import urlencode
 
@@ -233,6 +235,7 @@ def download_videos(
     video_contact_mode: VideoConcatMode = VideoConcatMode.random,
     audio_duration: float = 0.0,
     max_clip_duration: int = 5,
+    video_subject: str = "",
 ) -> List[str]:
     valid_video_items = []
     valid_video_urls = []
@@ -251,6 +254,7 @@ def download_videos(
 
         for item in video_items:
             if item.url not in valid_video_urls:
+                item.title = search_term
                 valid_video_items.append(item)
                 valid_video_urls.append(item.url)
                 found_duration += item.duration
@@ -258,7 +262,17 @@ def download_videos(
     logger.info(
         f"found total videos: {len(valid_video_items)}, required duration: {audio_duration} seconds, found duration: {found_duration} seconds"
     )
+
+    ranker_enabled = config.app.get("ranker_enabled", True)
+    if ranker_enabled and len(valid_video_items) >= 2:
+        from app.services import llm
+        logger.info("ranker: ranking video candidates by semantic relevance")
+        valid_video_items = llm.rank_video_candidates(valid_video_items, video_subject, search_terms)
+    elif video_contact_mode.value == VideoConcatMode.random.value:
+        random.shuffle(valid_video_items)
+
     video_paths = []
+    clip_term_map = {}
 
     material_directory = config.app.get("material_directory", "").strip()
     if material_directory == "task":
@@ -266,30 +280,50 @@ def download_videos(
     elif material_directory and not os.path.isdir(material_directory):
         material_directory = ""
 
-    if video_contact_mode.value == VideoConcatMode.random.value:
-        random.shuffle(valid_video_items)
-
     total_duration = 0.0
     for item in valid_video_items:
-        try:
-            logger.info(f"downloading video: {item.url}")
-            saved_video_path = save_video(
-                video_url=item.url, save_dir=material_directory
-            )
-            if saved_video_path:
-                logger.info(f"video saved: {saved_video_path}")
-                video_paths.append(saved_video_path)
-                seconds = min(max_clip_duration, item.duration)
-                total_duration += seconds
-                if total_duration > audio_duration * 1.5:
-                    logger.info(
-                        f"total duration of downloaded videos: {total_duration} seconds, skip downloading more"
-                    )
-                    break
-        except Exception as e:
-            logger.error(f"failed to download video: {utils.to_json(item)} => {str(e)}")
+        saved_video_path = _save_video_with_retry(item.url, material_directory)
+        if saved_video_path:
+            logger.info(f"video saved: {saved_video_path}")
+            video_paths.append(saved_video_path)
+            clip_term_map[saved_video_path] = item.title
+            seconds = min(max_clip_duration, item.duration)
+            total_duration += seconds
+            if total_duration > audio_duration * 1.5:
+                logger.info(
+                    f"total duration of downloaded videos: {total_duration} seconds, skip downloading more"
+                )
+                break
+
     logger.success(f"downloaded {len(video_paths)} videos")
+
+    if task_id and video_paths:
+        try:
+            meta_path = os.path.join(utils.task_dir(task_id), "clips-meta.json")
+            with open(meta_path, "w", encoding="utf-8") as f:
+                json.dump(clip_term_map, f, ensure_ascii=False)
+            logger.debug(f"saved clips-meta.json: {meta_path}")
+        except Exception as e:
+            logger.warning(f"failed to save clips-meta.json: {e}")
+
     return video_paths
+
+
+def _save_video_with_retry(video_url: str, save_dir: str, max_attempts: int = 3) -> str:
+    for attempt in range(max_attempts):
+        try:
+            logger.info(f"downloading video: {video_url}")
+            result = save_video(video_url=video_url, save_dir=save_dir)
+            if result:
+                return result
+        except Exception as e:
+            if attempt < max_attempts - 1:
+                wait = 2 ** attempt
+                logger.warning(f"download attempt {attempt + 1}/{max_attempts} failed: {e}, retrying in {wait}s")
+                time.sleep(wait)
+            else:
+                logger.error(f"failed to download video after {max_attempts} attempts: {video_url} => {e}")
+    return ""
 
 
 if __name__ == "__main__":
