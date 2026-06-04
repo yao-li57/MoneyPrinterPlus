@@ -132,6 +132,9 @@
     "Material Ranker Help": "When enabled, a single LLM call ranks candidate videos by semantic relevance to the video subject before downloading. Reduces manual material swaps from ~35% to ~18%.",
     "Semantic Alignment Settings": "**Semantic Alignment Settings**",
     "Enable Semantic Alignment": "Enable Semantic Alignment",
-    "Semantic Alignment Help": "When enabled, video clips are reordered so the visual content matches what is being said in each subtitle segment. Improves frame-subtitle relevance from ~2.1 to ~3.5 / 5 with no extra LLM calls."
+    "Semantic Alignment Help": "When enabled, video clips are reordered so the visual content matches what is being said in each subtitle segment. Improves frame-subtitle relevance from ~2.1 to ~3.5 / 5 with no extra LLM calls.",
+    "Last Task Failed": "Last task failed",
+    "Retry Failed Task": "Resume from checkpoint",
+    "Resuming from Checkpoint": "Resuming from checkpoint — skipping completed steps"
   }
 }

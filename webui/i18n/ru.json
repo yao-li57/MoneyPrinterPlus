@@ -114,5 +114,8 @@
     "Semantic Alignment Settings": "**Семантическое выравнивание**",
     "Enable Semantic Alignment": "Включить семантическое выравнивание",
     "Semantic Alignment Help": "Переупорядочивает клипы, чтобы визуальное содержимое соответствовало субтитрам. Улучшает релевантность с ~2,1 до ~3,5/5."
-  }
+  },
+  "Last Task Failed": "Last task failed",
+  "Retry Failed Task": "Resume from checkpoint",
+  "Resuming from Checkpoint": "Resuming from checkpoint — skipping completed steps"
 }

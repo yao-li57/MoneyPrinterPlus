@@ -67,6 +67,8 @@ if "ui_language" not in st.session_state:
 if "local_video_materials" not in st.session_state:
     # 记住用户最近一次已经落盘的本地素材，避免仅修改文案后二次生成时丢失素材列表。
     st.session_state["local_video_materials"] = []
+if "last_failed_task" not in st.session_state:
+    st.session_state["last_failed_task"] = None
 
 # 加载语言文件
 locales = utils.load_locales(i18n_dir)
@@ -1097,73 +1099,89 @@ with right_panel:
                     config.save_config()
                     st.success(tr("Pixabay API Key deleted successfully"))
 
+
+# 失败任务重试入口：若上次任务失败，在生成按钮上方显示重试提示
+if st.session_state["last_failed_task"]:
+    _failed = st.session_state["last_failed_task"]
+    _rc1, _rc2 = st.columns([3, 1])
+    _rc1.caption(f"⚠️ {tr('Last Task Failed')} · task_id: `{_failed['task_id']}`")
+    if _rc2.button(tr("Retry Failed Task"), use_container_width=True):
+        st.session_state["_do_retry"] = True
+        st.rerun()
+
 start_button = st.button(tr("Generate Video"), use_container_width=True, type="primary")
-if start_button:
+_do_retry = st.session_state.pop("_do_retry", False)
+
+if start_button or _do_retry:
     config.save_config()
-    task_id = str(uuid4())
-    if not params.video_subject and not params.video_script:
-        st.error(tr("Video Script and Subject Cannot Both Be Empty"))
-        scroll_to_bottom()
-        st.stop()
 
-    if params.video_source not in ["pexels", "pixabay", "local"]:
-        st.error(tr("Please Select a Valid Video Source"))
-        scroll_to_bottom()
-        st.stop()
+    if _do_retry and st.session_state["last_failed_task"]:
+        _failed = st.session_state.pop("last_failed_task")
+        st.session_state["last_failed_task"] = None
+        task_id = _failed["task_id"]
+        params = _failed["params"]
+        st.info(f"🔄 {tr('Resuming from Checkpoint')}: `{task_id}`")
+    else:
+        task_id = str(uuid4())
 
-    if params.video_source == "pexels" and not config.app.get("pexels_api_keys", ""):
-        st.error(tr("Please Enter the Pexels API Key"))
-        scroll_to_bottom()
-        st.stop()
+        if not params.video_subject and not params.video_script:
+            st.error(tr("Video Script and Subject Cannot Both Be Empty"))
+            scroll_to_bottom()
+            st.stop()
 
-    if params.video_source == "pixabay" and not config.app.get("pixabay_api_keys", ""):
-        st.error(tr("Please Enter the Pixabay API Key"))
-        scroll_to_bottom()
-        st.stop()
+        if params.video_source not in ["pexels", "pixabay", "local"]:
+            st.error(tr("Please Select a Valid Video Source"))
+            scroll_to_bottom()
+            st.stop()
 
-    if uploaded_audio_file:
-        task_dir = utils.task_dir(task_id)
-        # 上传文件名来自浏览器，不能直接拼到磁盘路径里；这里只保留扩展名，
-        # 并使用固定文件名保存到当前任务目录，避免路径穿越或特殊字符问题。
-        _, audio_ext = os.path.splitext(os.path.basename(uploaded_audio_file.name))
-        audio_ext = audio_ext.lower() or ".mp3"
-        custom_audio_path = os.path.join(task_dir, f"custom-audio{audio_ext}")
-        with open(custom_audio_path, "wb") as f:
-            f.write(uploaded_audio_file.getbuffer())
-        params.custom_audio_file = custom_audio_path
+        if params.video_source == "pexels" and not config.app.get("pexels_api_keys", ""):
+            st.error(tr("Please Enter the Pexels API Key"))
+            scroll_to_bottom()
+            st.stop()
 
-    if uploaded_files:
-        local_videos_dir = utils.storage_dir("local_videos", create=True)
-        # 每次重新上传时都以本次选择的素材为准，避免旧素材不断重复追加。
-        params.video_materials = []
-        persisted_local_materials = []
-        for file in uploaded_files:
-            file_path = os.path.join(local_videos_dir, f"{file.file_id}_{file.name}")
-            with open(file_path, "wb") as f:
-                f.write(file.getbuffer())
+        if params.video_source == "pixabay" and not config.app.get("pixabay_api_keys", ""):
+            st.error(tr("Please Enter the Pixabay API Key"))
+            scroll_to_bottom()
+            st.stop()
+
+        if uploaded_audio_file:
+            task_dir = utils.task_dir(task_id)
+            _, audio_ext = os.path.splitext(os.path.basename(uploaded_audio_file.name))
+            audio_ext = audio_ext.lower() or ".mp3"
+            custom_audio_path = os.path.join(task_dir, f"custom-audio{audio_ext}")
+            with open(custom_audio_path, "wb") as f:
+                f.write(uploaded_audio_file.getbuffer())
+            params.custom_audio_file = custom_audio_path
+
+        if uploaded_files:
+            local_videos_dir = utils.storage_dir("local_videos", create=True)
+            params.video_materials = []
+            persisted_local_materials = []
+            for file in uploaded_files:
+                file_path = os.path.join(local_videos_dir, f"{file.file_id}_{file.name}")
+                with open(file_path, "wb") as f:
+                    f.write(file.getbuffer())
+                    m = MaterialInfo()
+                    m.provider = "local"
+                    m.url = file_path
+                    params.video_materials.append(m)
+                    persisted_local_materials.append(
+                        {
+                            "provider": m.provider,
+                            "url": m.url,
+                            "duration": m.duration,
+                        }
+                    )
+            st.session_state["local_video_materials"] = persisted_local_materials
+        elif params.video_source == "local" and st.session_state["local_video_materials"]:
+            params.video_materials = []
+            for material in st.session_state["local_video_materials"]:
                 m = MaterialInfo()
-                m.provider = "local"
-                m.url = file_path
-                params.video_materials.append(m)
-                persisted_local_materials.append(
-                    {
-                        "provider": m.provider,
-                        "url": m.url,
-                        "duration": m.duration,
-                    }
-                )
-        # 将已上传并保存到本地的视频素材写入会话，供后续只改文案时直接复用。
-        st.session_state["local_video_materials"] = persisted_local_materials
-    elif params.video_source == "local" and st.session_state["local_video_materials"]:
-        # 当用户没有重新上传文件时，复用最近一次已经保存到磁盘的本地素材列表。
-        params.video_materials = []
-        for material in st.session_state["local_video_materials"]:
-            m = MaterialInfo()
-            m.provider = material.get("provider", "local")
-            m.url = material.get("url", "")
-            m.duration = material.get("duration", 0)
-            if m.url:
-                params.video_materials.append(m)
+                m.provider = material.get("provider", "local")
+                m.url = material.get("url", "")
+                m.duration = material.get("duration", 0)
+                if m.url:
+                    params.video_materials.append(m)
 
     log_container = st.empty()
     log_records = []
@@ -1186,9 +1204,11 @@ if start_button:
     if not result or "videos" not in result:
         st.error(tr("Video Generation Failed"))
         logger.error(tr("Video Generation Failed"))
+        st.session_state["last_failed_task"] = {"task_id": task_id, "params": params}
         scroll_to_bottom()
         st.stop()
 
+    st.session_state["last_failed_task"] = None
     video_files = result.get("videos", [])
     st.success(tr("Video Generation Completed"))
     try:

@@ -131,5 +131,8 @@
     "Semantic Alignment Settings": "**Semantische Ausrichtung**",
     "Enable Semantic Alignment": "Semantische Ausrichtung aktivieren",
     "Semantic Alignment Help": "Ordnet Videoclips neu, damit der Inhalt mit dem Untertitel übereinstimmt. Verbessert die Bild-Untertitel-Relevanz von ~2,1 auf ~3,5/5."
-  }
+  },
+  "Last Task Failed": "Last task failed",
+  "Retry Failed Task": "Resume from checkpoint",
+  "Resuming from Checkpoint": "Resuming from checkpoint — skipping completed steps"
 }

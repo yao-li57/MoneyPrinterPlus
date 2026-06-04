@@ -114,5 +114,8 @@
     "Semantic Alignment Settings": "**Anlamsal Hizalama**",
     "Enable Semantic Alignment": "Anlamsal Hizalamayı Etkinleştir",
     "Semantic Alignment Help": "Klipleri altyazı içeriğiyle görsel içerik eşleşecek şekilde yeniden sıralar. Alaka düzeyini ~2,1'den ~3,5/5'e çıkarır."
-  }
+  },
+  "Last Task Failed": "Last task failed",
+  "Retry Failed Task": "Resume from checkpoint",
+  "Resuming from Checkpoint": "Resuming from checkpoint — skipping completed steps"
 }

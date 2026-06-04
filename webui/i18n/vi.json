@@ -131,5 +131,8 @@
     "Semantic Alignment Settings": "**Căn chỉnh Ngữ nghĩa**",
     "Enable Semantic Alignment": "Bật Căn chỉnh Ngữ nghĩa",
     "Semantic Alignment Help": "Sắp xếp lại các clip để nội dung hình ảnh khớp với phụ đề. Cải thiện độ liên quan từ ~2,1 lên ~3,5/5."
-  }
+  },
+  "Last Task Failed": "Last task failed",
+  "Retry Failed Task": "Resume from checkpoint",
+  "Resuming from Checkpoint": "Resuming from checkpoint — skipping completed steps"
 }
