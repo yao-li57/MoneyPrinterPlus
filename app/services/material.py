@@ -245,8 +245,9 @@ def download_videos(
     if source == "pixabay":
         search_videos = search_videos_pixabay
 
-    # How many clips we actually need (with 1.5x buffer and 4x safety margin for failures)
-    needed_clips = max(1, math.ceil(audio_duration * 1.5 / max(max_clip_duration, 1)))
+    # How many clips we need: at least MIN_CLIPS for variety, capped at 4x for failure safety
+    MIN_CLIPS = 5
+    needed_clips = max(MIN_CLIPS, math.ceil(audio_duration * 1.5 / max(max_clip_duration, 1)))
     max_candidates = needed_clips * 4
 
     for search_term in search_terms:
@@ -295,7 +296,7 @@ def download_videos(
 
     # Single pass in ranked order: cache hit → use directly, miss → download
     for item in valid_video_items:
-        if total_duration > audio_duration * 1.5:
+        if total_duration > audio_duration * 1.5 and len(video_paths) >= MIN_CLIPS:
             break
         if tries >= max_candidates:
             logger.warning(f"reached download attempt limit ({max_candidates}), stopping")
