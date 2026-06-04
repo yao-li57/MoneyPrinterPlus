@@ -1,9 +1,11 @@
 import json
+import io
 import math
 import os
 import random
 import threading
 import time
+from contextlib import redirect_stdout
 from typing import List
 from urllib.parse import urlencode
 
@@ -204,7 +206,9 @@ def save_video(video_url: str, save_dir: str = "") -> str:
     if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
         clip = None
         try:
-            clip = VideoFileClip(video_path)
+            _captured = io.StringIO()
+            with redirect_stdout(_captured):
+                clip = VideoFileClip(video_path)
             duration = clip.duration
             # fps can be None for variable-frame-rate videos; FFmpeg handles
             # them fine, so only require a positive duration.
