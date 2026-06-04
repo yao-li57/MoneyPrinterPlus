@@ -281,21 +281,36 @@ def download_videos(
         material_directory = ""
 
     total_duration = 0.0
+    n_cached = 0
+    n_downloaded = 0
+    need_download = []
+
+    # Pass 1: collect from cache instantly (no network)
     for item in valid_video_items:
+        if total_duration > audio_duration * 1.5:
+            break
+        cached = _get_cached_path(item.url, material_directory)
+        if cached:
+            logger.info(f"cache hit: {cached}")
+            video_paths.append(cached)
+            clip_term_map[cached] = item.title
+            total_duration += min(max_clip_duration, item.duration)
+            n_cached += 1
+        else:
+            need_download.append(item)
+
+    # Pass 2: download only what's still needed
+    for item in need_download:
+        if total_duration > audio_duration * 1.5:
+            break
         saved_video_path = _save_video_with_retry(item.url, material_directory)
         if saved_video_path:
-            logger.info(f"video saved: {saved_video_path}")
             video_paths.append(saved_video_path)
             clip_term_map[saved_video_path] = item.title
-            seconds = min(max_clip_duration, item.duration)
-            total_duration += seconds
-            if total_duration > audio_duration * 1.5:
-                logger.info(
-                    f"total duration of downloaded videos: {total_duration} seconds, skip downloading more"
-                )
-                break
+            total_duration += min(max_clip_duration, item.duration)
+            n_downloaded += 1
 
-    logger.success(f"downloaded {len(video_paths)} videos")
+    logger.success(f"collected {len(video_paths)} videos: {n_cached} from cache, {n_downloaded} downloaded")
 
     if task_id and video_paths:
         try:
@@ -307,6 +322,18 @@ def download_videos(
             logger.warning(f"failed to save clips-meta.json: {e}")
 
     return video_paths
+
+
+def _get_cached_path(video_url: str, save_dir: str = "") -> str:
+    """Return the cached file path if it already exists on disk, else empty string."""
+    if not save_dir:
+        save_dir = utils.storage_dir("cache_videos")
+    url_without_query = video_url.split("?")[0]
+    url_hash = utils.md5(url_without_query)
+    video_path = os.path.join(save_dir, f"vid-{url_hash}.mp4")
+    if os.path.exists(video_path) and os.path.getsize(video_path) > 0:
+        return video_path
+    return ""
 
 
 def _save_video_with_retry(video_url: str, save_dir: str, max_attempts: int = 3) -> str:
