@@ -508,9 +508,14 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         params.video_concat_mode = VideoConcatMode(params.video_concat_mode)
 
     # 6. Generate final videos
-    final_video_paths, combined_video_paths = generate_final_videos(
-        task_id, params, downloaded_videos, audio_file, subtitle_path, video_terms=video_terms
-    )
+    try:
+        final_video_paths, combined_video_paths = generate_final_videos(
+            task_id, params, downloaded_videos, audio_file, subtitle_path, video_terms=video_terms
+        )
+    except Exception as e:
+        logger.error(f"video composition failed: {e}")
+        sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+        return
 
     if not final_video_paths:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
