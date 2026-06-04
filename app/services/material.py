@@ -336,6 +336,10 @@ def _save_video_with_retry(video_url: str, save_dir: str, max_attempts: int = 3)
             result = save_video(video_url=video_url, save_dir=save_dir)
             if result:
                 return result
+            # save_video returned "" without exception = invalid/corrupt file,
+            # retrying the same URL won't help.
+            logger.warning(f"video invalid after download, skipping: {video_url}")
+            return ""
         except Exception as e:
             if attempt < max_attempts - 1:
                 wait = 2 ** attempt
