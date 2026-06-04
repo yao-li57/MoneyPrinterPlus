@@ -1,4 +1,5 @@
 import json
+import math
 import os
 import random
 import threading
@@ -244,7 +245,14 @@ def download_videos(
     if source == "pixabay":
         search_videos = search_videos_pixabay
 
+    # How many clips we actually need (with 1.5x buffer and 4x safety margin for failures)
+    needed_clips = max(1, math.ceil(audio_duration * 1.5 / max(max_clip_duration, 1)))
+    max_candidates = needed_clips * 4
+
     for search_term in search_terms:
+        if len(valid_video_items) >= max_candidates:
+            logger.info(f"enough candidates collected ({len(valid_video_items)}), skipping remaining search terms")
+            break
         video_items = search_videos(
             search_term=search_term,
             minimum_duration=max_clip_duration,
@@ -283,9 +291,16 @@ def download_videos(
     total_duration = 0.0
     n_cached = 0
     n_downloaded = 0
+    tries = 0
 
     # Single pass in ranked order: cache hit → use directly, miss → download
     for item in valid_video_items:
+        if total_duration > audio_duration * 1.5:
+            break
+        if tries >= max_candidates:
+            logger.warning(f"reached download attempt limit ({max_candidates}), stopping")
+            break
+        tries += 1
         if total_duration > audio_duration * 1.5:
             break
         cached = _get_cached_path(item.url, material_directory)
