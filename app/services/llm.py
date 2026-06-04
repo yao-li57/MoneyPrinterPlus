@@ -706,13 +706,13 @@ def rank_video_candidates(candidates, video_subject: str, video_terms: List[str]
 
 ## Task
 Rank the following video search terms by their relevance to the video subject.
-Return a JSON array of the terms in order from MOST to LEAST relevant.
-You must return ONLY the JSON array, nothing else.
+Return a JSON array containing ALL the given terms in order from MOST to LEAST relevant.
+You must return ONLY the JSON array with the exact same terms, nothing else.
 
 ## Video Subject
 {video_subject}
 
-## Search Terms to Rank
+## Search Terms to Rank (return all of them)
 {terms_json}
 
 ## Output Example
@@ -722,22 +722,40 @@ You must return ONLY the JSON array, nothing else.
     try:
         response = _generate_response(prompt)
         if not response or "Error: " in response:
-            logger.warning(f"rank_video_candidates: LLM error, using original order")
+            logger.warning("rank_video_candidates: LLM error, using original order")
             return candidates
 
-        match = re.search(r"\[.*\]", response, re.DOTALL)
+        # Non-greedy match to get the first JSON array only
+        match = re.search(r"\[.*?\]", response, re.DOTALL)
         if not match:
-            logger.warning(f"rank_video_candidates: no JSON array found, using original order")
+            logger.warning("rank_video_candidates: no JSON array found, using original order")
             return candidates
 
         ranked_terms = json.loads(match.group())
-        if not isinstance(ranked_terms, list):
+        if not isinstance(ranked_terms, list) or not ranked_terms:
             return candidates
 
-        term_order = {term: i for i, term in enumerate(ranked_terms)}
+        # Case-insensitive lookup: normalise both ranked output and candidate titles
+        term_order = {term.lower(): i for i, term in enumerate(ranked_terms)}
+
+        # Verify LLM actually ranked our terms (not something else)
+        original_lower = {t.lower() for t in unique_terms}
+        ranked_lower = {t.lower() for t in ranked_terms}
+        overlap = original_lower & ranked_lower
+        if len(overlap) < len(unique_terms) * 0.5:
+            # Less than half the terms matched — LLM rewrote them, don't trust ranking
+            logger.warning(
+                f"rank_video_candidates: LLM returned different terms "
+                f"({len(overlap)}/{len(unique_terms)} matched), using original order"
+            )
+            return candidates
+
         sorted_candidates = sorted(
             candidates,
-            key=lambda item: term_order.get(item.title, len(ranked_terms))
+            key=lambda item: term_order.get(
+                item.title.lower() if item.title else "",
+                len(ranked_terms)   # unmatched terms go to end
+            )
         )
         logger.info(f"rank_video_candidates: ranked {len(unique_terms)} terms => {ranked_terms}")
         return sorted_candidates
