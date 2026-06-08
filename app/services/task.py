@@ -346,14 +346,41 @@ def generate_final_videos(
     return final_video_paths, combined_video_paths
 
 
+def _emit_task_summary(task_id: str, status: str, t_task_start: float, stage_timings: dict, **extra):
+    """
+    Emit a single structured log line summarizing the task lifecycle so postmortems
+    can grep for `task_summary` and recover task_id / per-stage durations / status.
+    Never raise — observability must not destabilize the pipeline.
+    """
+    try:
+        total = round(time.perf_counter() - t_task_start, 2)
+        logger.bind(event="task_summary", task_id=task_id, status=status, total_seconds=total, stage_timings=dict(stage_timings), **extra).info(
+            f"task_summary: task_id={task_id} status={status} total={total}s stages={dict(stage_timings)}"
+        )
+    except Exception:
+        pass
+
+
 def start(task_id, params: VideoParams, stop_at: str = "video"):
+    # contextualize binds task_id onto every loguru call inside the pipeline
+    # (including downstream services like material.py / video.py), so existing
+    # logger.info/error calls remain unchanged but all gain a task_id field.
+    with logger.contextualize(task_id=task_id):
+        return _do_start(task_id, params, stop_at)
+
+
+def _do_start(task_id, params: VideoParams, stop_at: str = "video"):
     logger.info(f"start task: {task_id}, stop_at: {stop_at}")
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=5, step="script")
+
+    t_task_start = time.perf_counter()
+    stage_timings: dict = {}
 
     # Load checkpoint: skip steps whose output files already exist on disk
     checkpoint = _load_checkpoint(task_id)
 
     # 1. Generate script
+    t_stage = time.perf_counter()
     if checkpoint.get("video_script"):
         video_script = checkpoint["video_script"]
         logger.info("checkpoint: reusing existing script")
@@ -361,7 +388,10 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         video_script = generate_script(task_id, params)
         if not video_script or "Error: " in video_script:
             sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+            stage_timings["script"] = round(time.perf_counter() - t_stage, 2)
+            _emit_task_summary(task_id, "failed_at_script", t_task_start, stage_timings)
             return
+    stage_timings["script"] = round(time.perf_counter() - t_stage, 2)
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=10)
 
@@ -369,6 +399,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         sm.state.update_task(
             task_id, state=const.TASK_STATE_COMPLETE, progress=100, script=video_script
         )
+        _emit_task_summary(task_id, "complete_at_script", t_task_start, stage_timings)
         return {"script": video_script}
 
     # 2+3: Generate terms and audio
@@ -383,6 +414,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         audio_duration = math.ceil(voice.get_audio_duration(audio_file))
         # sub_maker stays None; subtitle generation will fall back to Whisper if needed
 
+    t_stage = time.perf_counter()
     if params.video_source != "local" and stop_at != "terms":
         sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=15, step="terms_and_tts")
         need_terms = not video_terms
@@ -394,20 +426,28 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             video_terms = terms_future.result()
             if not video_terms:
                 sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
+                _emit_task_summary(task_id, "failed_at_terms", t_task_start, stage_timings)
                 return
             audio_file, audio_duration, sub_maker = audio_future.result()
             if not audio_file:
                 sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
+                _emit_task_summary(task_id, "failed_at_audio", t_task_start, stage_timings)
                 return
         elif need_terms:
             video_terms = generate_terms(task_id, params, video_script)
             if not video_terms:
                 sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
+                _emit_task_summary(task_id, "failed_at_terms", t_task_start, stage_timings)
                 return
         elif need_audio:
             audio_file, audio_duration, sub_maker = generate_audio(task_id, params, video_script)
             if not audio_file:
                 sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
+                _emit_task_summary(task_id, "failed_at_audio", t_task_start, stage_timings)
                 return
         else:
             logger.info("checkpoint: reusing existing audio and terms")
@@ -418,6 +458,8 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             video_terms = generate_terms(task_id, params, video_script)
             if not video_terms:
                 sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
+                _emit_task_summary(task_id, "failed_at_terms", t_task_start, stage_timings)
                 return
     else:
         # local source: only TTS needed
@@ -426,7 +468,10 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             audio_file, audio_duration, sub_maker = generate_audio(task_id, params, video_script)
             if not audio_file:
                 sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+                stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
+                _emit_task_summary(task_id, "failed_at_audio", t_task_start, stage_timings)
                 return
+    stage_timings["terms_and_tts"] = round(time.perf_counter() - t_stage, 2)
 
     save_script_data(task_id, video_script, video_terms, params)
 
@@ -434,6 +479,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         sm.state.update_task(
             task_id, state=const.TASK_STATE_COMPLETE, progress=100, terms=video_terms
         )
+        _emit_task_summary(task_id, "complete_at_terms", t_task_start, stage_timings)
         return {"script": video_script, "terms": video_terms}
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=30)
@@ -445,6 +491,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             progress=100,
             audio_file=audio_file,
         )
+        _emit_task_summary(task_id, "complete_at_audio", t_task_start, stage_timings)
         return {"audio_file": audio_file, "audio_duration": audio_duration}
 
     # 4+5: Generate subtitle and fetch materials in parallel — both depend only on TTS output.
@@ -455,6 +502,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     need_subtitle = not checkpoint_subtitle
     need_materials = not checkpoint_videos
 
+    t_stage = time.perf_counter()
     if need_subtitle and need_materials:
         with ThreadPoolExecutor(max_workers=2) as executor:
             subtitle_future = executor.submit(
@@ -477,9 +525,11 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         logger.info("checkpoint: reusing existing subtitle and downloaded videos")
         subtitle_path = checkpoint_subtitle
         downloaded_videos = checkpoint_videos
+    stage_timings["subtitle_and_material"] = round(time.perf_counter() - t_stage, 2)
 
     if not downloaded_videos:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+        _emit_task_summary(task_id, "failed_at_materials", t_task_start, stage_timings)
         return
 
     if stop_at == "subtitle":
@@ -489,6 +539,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             progress=100,
             subtitle_path=subtitle_path,
         )
+        _emit_task_summary(task_id, "complete_at_subtitle", t_task_start, stage_timings)
         return {"subtitle_path": subtitle_path}
 
     if stop_at == "materials":
@@ -498,6 +549,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
             progress=100,
             materials=downloaded_videos,
         )
+        _emit_task_summary(task_id, "complete_at_materials", t_task_start, stage_timings)
         return {"materials": downloaded_videos}
 
     sm.state.update_task(task_id, state=const.TASK_STATE_PROCESSING, progress=50, step="compose")
@@ -508,6 +560,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
         params.video_concat_mode = VideoConcatMode(params.video_concat_mode)
 
     # 6. Generate final videos
+    t_stage = time.perf_counter()
     try:
         final_video_paths, combined_video_paths = generate_final_videos(
             task_id, params, downloaded_videos, audio_file, subtitle_path, video_terms=video_terms
@@ -515,11 +568,16 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     except Exception as e:
         logger.error(f"video composition failed: {e}")
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+        stage_timings["compose"] = round(time.perf_counter() - t_stage, 2)
+        _emit_task_summary(task_id, "failed_at_compose", t_task_start, stage_timings, error=str(e))
         return
 
     if not final_video_paths:
         sm.state.update_task(task_id, state=const.TASK_STATE_FAILED)
+        stage_timings["compose"] = round(time.perf_counter() - t_stage, 2)
+        _emit_task_summary(task_id, "failed_at_compose", t_task_start, stage_timings, error="no_final_videos")
         return
+    stage_timings["compose"] = round(time.perf_counter() - t_stage, 2)
 
     logger.success(
         f"task {task_id} finished, generated {len(final_video_paths)} videos."
@@ -554,6 +612,7 @@ def start(task_id, params: VideoParams, stop_at: str = "video"):
     sm.state.update_task(
         task_id, state=const.TASK_STATE_COMPLETE, progress=100, **kwargs
     )
+    _emit_task_summary(task_id, "complete", t_task_start, stage_timings)
     return kwargs
 
 
