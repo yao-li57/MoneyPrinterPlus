@@ -262,5 +262,172 @@ class TestStartComposeFailure(_ConfigIsolatedTestCase):
         )
 
 
+# ---------------------------------------------------------------------------
+# M2: 记忆模块 — 跨任务素材去重测试
+# ---------------------------------------------------------------------------
+
+class TestRankerRecencyPenalty(_ConfigIsolatedTestCase):
+    """rank_video_candidates: 最近用过的 URL 应后置，新鲜 URL 前置。"""
+
+    def setUp(self):
+        super().setUp()
+        config.app["memory_enabled"] = True
+        config.app["ranker_enabled"] = True
+
+    def _make_candidates(self, url_term_pairs):
+        items = []
+        for url, term in url_term_pairs:
+            m = MaterialInfo()
+            m.url = url
+            m.title = term
+            m.duration = 5
+            items.append(m)
+        return items
+
+    def test_recently_used_url_demoted_to_back(self):
+        """
+        LLM 按相关度给出两个 term（cats > dogs），stale_url 对应 cats（排名更好），
+        但 stale_url 3 天前用过（bucket 2）→ recency 优先，应排到 fresh_url 后面。
+        """
+        import time
+        recent_ts = int(time.time()) - 3 * 86400   # 3 天前 → bucket 2
+        # fresh_url 从未出现在 memory → bucket 0
+
+        stale_url = "https://x/stale.mp4"
+        fresh_url = "https://x/fresh.mp4"
+
+        candidates = self._make_candidates([
+            (stale_url, "cats"),   # LLM 给 cats 更高排名
+            (fresh_url, "dogs"),
+        ])
+
+        # LLM: cats 比 dogs 更相关
+        # Memory: stale(cats) 3 天内用过，fresh(dogs) 从未用过
+        fake_histories = {stale_url: recent_ts}  # fresh_url 不在 memory → bucket 0
+
+        from app.services import llm
+        with patch("app.services.llm._generate_response", return_value='["cats", "dogs"]'), \
+             patch("app.services.memory.store.get_material_histories",
+                   return_value=fake_histories):
+            result = llm.rank_video_candidates(candidates, "cats and dogs", ["cats", "dogs"])
+
+        urls = [item.url for item in result]
+        self.assertEqual(urls[0], fresh_url,
+                         "fresh/never-used URL must come first even if its LLM rank is lower")
+        self.assertEqual(urls[1], stale_url,
+                         "recently-used URL must be demoted regardless of LLM rank")
+
+    def test_memory_failure_falls_back_to_original_ranking(self):
+        """memory.get_material_histories 崩溃时 ranker 应回退到原始顺序，不抛异常。"""
+        candidates = self._make_candidates([
+            ("https://x/a.mp4", "cats"),
+            ("https://x/b.mp4", "dogs"),
+        ])
+
+        from app.services import llm
+        with patch("app.services.llm._generate_response", return_value='["cats", "dogs"]'), \
+             patch("app.services.memory.store.get_material_histories",
+                   side_effect=RuntimeError("db locked")):
+            result = llm.rank_video_candidates(candidates, "pets", ["cats", "dogs"])
+
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0].url, "https://x/a.mp4")
+
+    def test_memory_disabled_skips_recency_step(self):
+        """memory_enabled = false 时完全跳过 recency 步骤。"""
+        config.app["memory_enabled"] = False
+        candidates = self._make_candidates([
+            ("https://x/a.mp4", "cats"),
+            ("https://x/b.mp4", "dogs"),
+        ])
+
+        from app.services import llm
+        with patch("app.services.llm._generate_response", return_value='["dogs", "cats"]'), \
+             patch("app.services.memory.store.get_material_histories") as mock_hist:
+            result = llm.rank_video_candidates(candidates, "pets", ["cats", "dogs"])
+
+        mock_hist.assert_not_called()
+        self.assertEqual(result[0].url, "https://x/b.mp4", "dogs ranked first by LLM")
+
+
+class TestDownloadVideosMemoryWrite(_ConfigIsolatedTestCase):
+    """download_videos: 每条成功收集的素材都应写入 memory（cache hit + download）。"""
+
+    def setUp(self):
+        super().setUp()
+        config.app["memory_enabled"] = True
+
+    def test_cache_hit_recorded_in_memory(self):
+        items = _make_items(1, duration=10)
+        items[0].url = "https://x/cached.mp4"
+        items[0].title = "cats"
+
+        with patch("app.services.material.search_videos_pexels", return_value=items), \
+             patch("app.services.material._get_cached_path", return_value="/fake/cached.mp4"), \
+             patch("app.services.material._save_video_with_retry", return_value=""), \
+             patch("app.services.memory.store.record_material_use") as mock_record:
+            material.download_videos(
+                task_id="t1", search_terms=["cats"], source="pexels",
+                audio_duration=5, max_clip_duration=10, video_subject="cats",
+            )
+
+        mock_record.assert_called()
+        call_kwargs = mock_record.call_args.kwargs
+        self.assertEqual(call_kwargs["url"], "https://x/cached.mp4")
+        self.assertEqual(call_kwargs["subject"], "cats")
+
+    def test_downloaded_clip_recorded_in_memory(self):
+        items = _make_items(1, duration=10)
+        items[0].url = "https://x/downloaded.mp4"
+        items[0].title = "dogs"
+
+        with patch("app.services.material.search_videos_pexels", return_value=items), \
+             patch("app.services.material._get_cached_path", return_value=""), \
+             patch("app.services.material._save_video_with_retry",
+                   return_value="/fake/downloaded.mp4"), \
+             patch("app.services.memory.store.record_material_use") as mock_record:
+            material.download_videos(
+                task_id="t2", search_terms=["dogs"], source="pexels",
+                audio_duration=5, max_clip_duration=10, video_subject="dogs",
+            )
+
+        mock_record.assert_called()
+        call_kwargs = mock_record.call_args.kwargs
+        self.assertEqual(call_kwargs["url"], "https://x/downloaded.mp4")
+
+    def test_memory_write_failure_does_not_abort_collection(self):
+        """memory.record_material_use 崩溃时不应中断素材收集。"""
+        items = _make_items(3, duration=10)
+
+        with patch("app.services.material.search_videos_pexels", return_value=items), \
+             patch("app.services.material._get_cached_path", return_value=""), \
+             patch("app.services.material._save_video_with_retry",
+                   side_effect=[f"/fake/v{i}.mp4" for i in range(3)]), \
+             patch("app.services.memory.store.record_material_use",
+                   side_effect=RuntimeError("db full")):
+            result = material.download_videos(
+                task_id="t3", search_terms=["x"], source="pexels",
+                audio_duration=5, max_clip_duration=10,
+            )
+
+        self.assertGreaterEqual(len(result), 1, "collection must succeed even if memory write fails")
+
+    def test_memory_disabled_skips_write(self):
+        config.app["memory_enabled"] = False
+        items = _make_items(1, duration=10)
+
+        with patch("app.services.material.search_videos_pexels", return_value=items), \
+             patch("app.services.material._get_cached_path", return_value=""), \
+             patch("app.services.material._save_video_with_retry",
+                   return_value="/fake/v0.mp4"), \
+             patch("app.services.memory.store.record_material_use") as mock_record:
+            material.download_videos(
+                task_id="t4", search_terms=["x"], source="pexels",
+                audio_duration=5, max_clip_duration=10,
+            )
+
+        mock_record.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

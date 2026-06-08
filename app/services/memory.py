@@ -196,6 +196,24 @@ class MemoryStore:
             ).fetchall()
             return [_row_to_material(r) for r in rows]
 
+    def get_material_histories(self, urls: List[str]) -> Dict[str, int]:
+        """
+        Batch lookup of last_used_at timestamps for the given URL list.
+        Returns {url: last_used_at_unix_ts} for URLs present in the DB.
+        Missing URLs are simply absent from the result dict.
+        Single SQL round-trip, single lock acquisition.
+        """
+        if not urls:
+            return {}
+        with self._lock:
+            self._ensure_init()
+            placeholders = ",".join("?" * len(urls))
+            rows = self._conn.execute(
+                f"SELECT url, last_used_at FROM material_memory WHERE url IN ({placeholders})",
+                urls,
+            ).fetchall()
+            return {row["url"]: row["last_used_at"] for row in rows}
+
     def list_materials(self, limit: int = 100, offset: int = 0) -> List[Dict[str, Any]]:
         with self._lock:
             self._ensure_init()

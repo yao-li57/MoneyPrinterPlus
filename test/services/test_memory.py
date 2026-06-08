@@ -207,6 +207,38 @@ class TestAdmin(_MemoryStoreTestCase):
         self.assertEqual(row[0], "1", "_meta must survive clear_all")
 
 
+class TestBatchQuery(_MemoryStoreTestCase):
+    """get_material_histories: batch URL lookup for M2 recency penalty."""
+
+    def test_returns_empty_for_unknown_urls(self):
+        result = self.store.get_material_histories(["https://x/nope.mp4"])
+        self.assertEqual(result, {})
+
+    def test_empty_input_returns_empty(self):
+        self.assertEqual(self.store.get_material_histories([]), {})
+
+    def test_returns_only_known_urls(self):
+        self.store.record_material_use(url="https://x/a.mp4", subject="s")
+        self.store.record_material_use(url="https://x/b.mp4", subject="s")
+        result = self.store.get_material_histories(
+            ["https://x/a.mp4", "https://x/b.mp4", "https://x/c.mp4"]
+        )
+        self.assertIn("https://x/a.mp4", result)
+        self.assertIn("https://x/b.mp4", result)
+        self.assertNotIn("https://x/c.mp4", result, "unknown URL must not appear")
+        self.assertIsInstance(result["https://x/a.mp4"], int)
+
+    def test_last_used_at_updates_on_re_record(self):
+        import time
+        url = "https://x/d.mp4"
+        self.store.record_material_use(url=url, subject="s")
+        ts1 = self.store.get_material_histories([url])[url]
+        time.sleep(0.05)  # ensure clock advances
+        self.store.record_material_use(url=url, subject="s")
+        ts2 = self.store.get_material_histories([url])[url]
+        self.assertGreaterEqual(ts2, ts1)
+
+
 class TestThreadSafety(_MemoryStoreTestCase):
     def test_concurrent_writes_do_not_corrupt(self):
         """Pipeline uses ThreadPoolExecutor — writes from worker threads must serialize cleanly."""

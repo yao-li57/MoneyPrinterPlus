@@ -757,6 +757,46 @@ You must return ONLY the JSON array with the exact same terms, nothing else.
                 len(ranked_terms)   # unmatched terms go to end
             )
         )
+
+        # Recency penalty: demote URLs used recently so the same clip does not
+        # appear across back-to-back tasks. Three buckets, used as the primary
+        # sort key (smaller = fresher = shown first); term_order is secondary.
+        #   0 — never seen or used more than 30 days ago  → no penalty
+        #   1 — used 7–30 days ago                        → mild demotion
+        #   2 — used within the last 7 days               → strong demotion
+        try:
+            if config.app.get("memory_enabled", True):
+                import time
+                from app.services.memory import store as _mem
+                now = int(time.time())
+                histories = _mem.get_material_histories(
+                    [item.url for item in sorted_candidates if item.url]
+                )
+
+                def _recency_bucket(url: str) -> int:
+                    ts = histories.get(url)
+                    if ts is None:
+                        return 0
+                    age = now - ts
+                    if age < 7 * 86400:
+                        return 2
+                    if age < 30 * 86400:
+                        return 1
+                    return 0
+
+                sorted_candidates = sorted(
+                    sorted_candidates,
+                    key=lambda item: (
+                        _recency_bucket(item.url or ""),
+                        term_order.get(item.title.lower() if item.title else "", len(ranked_terms)),
+                    ),
+                )
+                n_penalised = sum(1 for item in sorted_candidates if _recency_bucket(item.url or "") > 0)
+                if n_penalised:
+                    logger.info(f"memory: demoted {n_penalised} recently-used URLs")
+        except Exception as _e:
+            logger.warning(f"memory: recency penalty skipped: {_e}")
+
         logger.info(f"rank_video_candidates: ranked {len(unique_terms)} terms => {ranked_terms}")
         return sorted_candidates
     except Exception as e:

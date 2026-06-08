@@ -299,6 +299,7 @@ def download_videos(
     tries = 0
 
     # Single pass in ranked order: cache hit → use directly, miss → download
+    _memory_enabled = config.app.get("memory_enabled", True)
     for item in valid_video_items:
         if total_duration > audio_duration * 1.5 and len(video_paths) >= MIN_CLIPS:
             break
@@ -313,6 +314,17 @@ def download_videos(
             clip_term_map[cached] = item.title
             total_duration += min(max_clip_duration, item.duration)
             n_cached += 1
+            if _memory_enabled:
+                try:
+                    from app.services.memory import store as _mem
+                    _mem.record_material_use(
+                        url=item.url,
+                        subject=video_subject,
+                        search_terms=[item.title] if item.title else None,
+                        task_id=task_id or None,
+                    )
+                except Exception as _e:
+                    logger.warning(f"memory: failed to record cache hit: {_e}")
         else:
             saved = _save_video_with_retry(item.url, material_directory)
             if saved:
@@ -320,6 +332,17 @@ def download_videos(
                 clip_term_map[saved] = item.title
                 total_duration += min(max_clip_duration, item.duration)
                 n_downloaded += 1
+                if _memory_enabled:
+                    try:
+                        from app.services.memory import store as _mem
+                        _mem.record_material_use(
+                            url=item.url,
+                            subject=video_subject,
+                            search_terms=[item.title] if item.title else None,
+                            task_id=task_id or None,
+                        )
+                    except Exception as _e:
+                        logger.warning(f"memory: failed to record download: {_e}")
 
     logger.success(f"collected {len(video_paths)} videos: {n_cached} from cache, {n_downloaded} downloaded")
 

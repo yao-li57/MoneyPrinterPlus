@@ -246,6 +246,13 @@ critic_max_iterations = 2
 # Adds ~1 extra LLM call per video task.
 ranker_enabled = true
 
+# Cross-task material memory: records every downloaded URL in a local SQLite store
+# (storage/memory/memory.db). When the ranker runs, URLs used within the last 7 days
+# are demoted to the back of the list; 7–30 days get a mild demotion. Fresh or
+# long-ago-used clips are unaffected. Reduces same-URL repetition across back-to-back
+# tasks without changing the LLM ranking logic. No extra LLM calls; no new dependencies.
+memory_enabled = true
+
 # Semantic timeline alignment: match subtitle segments to video clips by keyword overlap.
 # Clips are reordered so visuals correspond to what is being said in each segment.
 # Requires subtitle generation to be enabled and clips-meta.json to be present.
