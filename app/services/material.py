@@ -306,8 +306,6 @@ def download_videos(
             logger.warning(f"reached download attempt limit ({max_candidates}), stopping")
             break
         tries += 1
-        if total_duration > audio_duration * 1.5:
-            break
         cached = _get_cached_path(item.url, material_directory)
         if cached:
             logger.info(f"cache hit: {cached}")
