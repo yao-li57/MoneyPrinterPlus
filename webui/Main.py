@@ -614,6 +614,34 @@ with left_panel:
         params.video_script = st.text_area(
             tr("Video Script"), value=st.session_state["video_script"], height=280
         )
+
+        # Script feedback buttons: shown only when a script has been generated
+        if st.session_state.get("video_script"):
+            _fb_c1, _fb_c2, _fb_spacer = st.columns([1, 1, 4])
+            if _fb_c1.button(tr("Accept Script"), key="accept_script", use_container_width=True):
+                try:
+                    from app.services.memory import store as _mem
+                    _mem.record_script_sample(
+                        task_id=None,
+                        subject=params.video_subject or "",
+                        script=st.session_state["video_script"],
+                        status="accepted",
+                    )
+                    st.toast(tr("Script Saved to Memory"))
+                except Exception as _e:
+                    logger.warning(f"memory: failed to record accepted script: {_e}")
+            if _fb_c2.button(tr("Reject Script"), key="reject_script", use_container_width=True):
+                try:
+                    from app.services.memory import store as _mem
+                    _mem.record_script_sample(
+                        task_id=None,
+                        subject=params.video_subject or "",
+                        script=st.session_state["video_script"],
+                        status="rejected",
+                    )
+                    st.toast(tr("Script Marked as Rejected"))
+                except Exception as _e:
+                    logger.warning(f"memory: failed to record rejected script: {_e}")
         if st.button(tr("Generate Video Keywords"), key="auto_generate_terms"):
             if not params.video_script:
                 st.error(tr("Please Enter the Video Subject"))

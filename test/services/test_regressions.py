@@ -429,5 +429,146 @@ class TestDownloadVideosMemoryWrite(_ConfigIsolatedTestCase):
         mock_record.assert_not_called()
 
 
+# ---------------------------------------------------------------------------
+# M3: 失败记录自动写入 + Critic Agent 风格学习
+# ---------------------------------------------------------------------------
+
+class TestFailureAutoRecord(_ConfigIsolatedTestCase):
+    """_emit_task_summary: status 以 failed_ 开头时应自动写入 failure_records。"""
+
+    def setUp(self):
+        super().setUp()
+        import tempfile, os
+        self._tmp = tempfile.TemporaryDirectory()
+        from app.services.memory import MemoryStore
+        self._store = MemoryStore(db_path=os.path.join(self._tmp.name, "m.db"))
+        config.app["memory_enabled"] = True
+
+    def tearDown(self):
+        self._store.close()
+        self._tmp.cleanup()
+        super().tearDown()
+
+    def test_failed_status_records_failure(self):
+        import time
+        from app.services import task as tm
+        with patch("app.services.memory.store", self._store):
+            tm._emit_task_summary(
+                task_id="t1",
+                status="failed_at_compose",
+                t_task_start=time.perf_counter() - 5,
+                stage_timings={"compose": 5.0},
+                error="ffmpeg crashed",
+            )
+        rows = self._store.list_failures()
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["stage"], "compose")
+        self.assertEqual(rows[0]["error"], "ffmpeg crashed")
+        self.assertEqual(rows[0]["task_id"], "t1")
+
+    def test_complete_status_does_not_record(self):
+        import time
+        from app.services import task as tm
+        with patch("app.services.memory.store", self._store):
+            tm._emit_task_summary(
+                task_id="t2",
+                status="complete",
+                t_task_start=time.perf_counter() - 3,
+                stage_timings={"script": 1.0},
+            )
+        self.assertEqual(self._store.stats()["failures"], 0)
+
+    def test_memory_disabled_skips_record(self):
+        config.app["memory_enabled"] = False
+        import time
+        from app.services import task as tm
+        with patch("app.services.memory.store", self._store):
+            tm._emit_task_summary(
+                task_id="t3",
+                status="failed_at_script",
+                t_task_start=time.perf_counter(),
+                stage_timings={},
+            )
+        self.assertEqual(self._store.stats()["failures"], 0)
+
+
+class TestCritiqueScriptStyleLearning(_ConfigIsolatedTestCase):
+    """critique_script: 有 accepted 样本时应注入风格到 rewrite prompt。"""
+
+    def setUp(self):
+        super().setUp()
+        import tempfile, os
+        self._tmp = tempfile.TemporaryDirectory()
+        from app.services.memory import MemoryStore
+        self._store = MemoryStore(db_path=os.path.join(self._tmp.name, "m.db"))
+        config.app["memory_enabled"] = True
+
+    def tearDown(self):
+        self._store.close()
+        self._tmp.cleanup()
+        super().tearDown()
+
+    def test_style_examples_injected_into_rewrite_prompt(self):
+        """accepted 样本应出现在 rewrite prompt 里。"""
+        self._store.record_script_sample(
+            task_id=None, subject="money", script="Style example text.", status="accepted"
+        )
+        captured_prompts = []
+
+        def fake_generate(prompt):
+            captured_prompts.append(prompt)
+            if "Score" in prompt or "Evaluator" in prompt:
+                return "0.3"   # force rewrite
+            return "Rewritten script."
+
+        from app.services import llm
+        with patch("app.services.memory.store", self._store), \
+             patch("app.services.llm._generate_response", side_effect=fake_generate):
+            llm.critique_script("Bad script.", "money", max_iterations=1)
+
+        rewrite_prompts = [p for p in captured_prompts if "Rewriter" in p]
+        self.assertTrue(rewrite_prompts, "Rewrite prompt must be generated")
+        self.assertIn("Style example text.", rewrite_prompts[0],
+                      "Accepted sample must appear in the rewrite prompt")
+
+    def test_no_samples_skips_style_block(self):
+        """无 accepted 样本时 rewrite prompt 不含 style block。"""
+        captured_prompts = []
+
+        def fake_generate(prompt):
+            captured_prompts.append(prompt)
+            if "Score" in prompt or "Evaluator" in prompt:
+                return "0.3"
+            return "Rewritten."
+
+        from app.services import llm
+        with patch("app.services.memory.store", self._store), \
+             patch("app.services.llm._generate_response", side_effect=fake_generate):
+            llm.critique_script("Some script.", "topic", max_iterations=1)
+
+        rewrite_prompts = [p for p in captured_prompts if "Rewriter" in p]
+        if rewrite_prompts:
+            self.assertNotIn("Preferred Style", rewrite_prompts[0])
+
+    def test_memory_disabled_no_style_injection(self):
+        config.app["memory_enabled"] = False
+        self._store.record_script_sample(
+            task_id=None, subject="s", script="Should not appear.", status="accepted"
+        )
+        captured_prompts = []
+
+        def fake_generate(prompt):
+            captured_prompts.append(prompt)
+            return "0.3" if "Score" in prompt or "Evaluator" in prompt else "OK"
+
+        from app.services import llm
+        with patch("app.services.memory.store", self._store), \
+             patch("app.services.llm._generate_response", side_effect=fake_generate):
+            llm.critique_script("Script.", "topic", max_iterations=1)
+
+        for p in captured_prompts:
+            self.assertNotIn("Should not appear.", p)
+
+
 if __name__ == "__main__":
     unittest.main()

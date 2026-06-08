@@ -549,6 +549,23 @@ def critique_script(
     current = video_script
     lang_hint = f" in {language}" if language else ""
 
+    # Load accepted style samples once, before the loop.
+    _style_block = ""
+    try:
+        if config.app.get("memory_enabled", True):
+            from app.services.memory import store as _mem
+            samples = _mem.list_script_samples(status="accepted", limit=3)
+            if samples:
+                examples = "\n\n".join(
+                    f"Example {i + 1}:\n{s['script']}" for i, s in enumerate(samples)
+                )
+                _style_block = (
+                    "\n\n## User's Preferred Style Examples"
+                    " (match this tone and structure):\n" + examples
+                )
+    except Exception as _e:
+        logger.warning(f"memory: failed to load style samples: {_e}")
+
     for i in range(max_iterations):
         score_prompt = f"""
 # Role: Video Script Evaluator
@@ -599,7 +616,7 @@ Rewrite the following video script{lang_hint} to score above {score_threshold:.2
 2. Use the same language as the original
 3. Do not mention this rewrite task or the scoring criteria
 
-## Video Subject: {video_subject}
+## Video Subject: {video_subject}{_style_block}
 
 ## Original Script:
 {current}

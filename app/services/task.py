@@ -350,6 +350,7 @@ def _emit_task_summary(task_id: str, status: str, t_task_start: float, stage_tim
     """
     Emit a single structured log line summarizing the task lifecycle so postmortems
     can grep for `task_summary` and recover task_id / per-stage durations / status.
+    Also auto-records failed tasks into memory for the failure-hint feature.
     Never raise — observability must not destabilize the pipeline.
     """
     try:
@@ -359,6 +360,20 @@ def _emit_task_summary(task_id: str, status: str, t_task_start: float, stage_tim
         )
     except Exception:
         pass
+
+    # Auto-record failures so the WebUI retry panel can show a hint.
+    if status.startswith("failed_") and config.app.get("memory_enabled", True):
+        try:
+            from app.services.memory import store as _mem
+            stage = status.removeprefix("failed_at_")   # "failed_at_compose" → "compose"
+            _mem.record_failure(
+                task_id=task_id,
+                stage=stage,
+                error=extra.get("error"),
+                provider=config.app.get("llm_provider", "") or config.app.get("llm", ""),
+            )
+        except Exception as _e:
+            logger.warning(f"memory: failed to record failure event: {_e}")
 
 
 def start(task_id, params: VideoParams, stop_at: str = "video"):
